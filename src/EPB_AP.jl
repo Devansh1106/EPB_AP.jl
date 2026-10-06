@@ -1,5 +1,8 @@
 module EPB_AP
 
-# Write your package code here.
+include("boundary.jl")
+include("grid.jl")
+
+export Grid, energy
 
 end
