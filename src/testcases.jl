@@ -19,12 +19,39 @@ Base.@kwdef struct TestCase
     diagnostics::Function = (case, res) -> Pair{String,Any}[]
 end
 
-const CASES = (:smooth,)
+const CASES = (:smooth, :steep, :nearvacuum, :bump, :step, :expansion, :soliton, :ap, :simplewave, :riemann)
+
+const DISSIPATION = Scheme(kind = :dissipation)
 
 function case_defaults(name::Symbol)
     unit = (0.0, 1.0)
     name == :smooth && return (domain = unit, eps = 1.0, T = 0.5, N = 200,
         init = x -> (1 .+ 0.3sinpi.(2x), 0.2cospi.(2x)))
+    name == :steep && return (domain = unit, eps = 1.0, T = 0.5, N = 200,
+        init = x -> (1 .+ 0.8sinpi.(2x) .^ 3, 0.25cospi.(2x)))
+    name == :nearvacuum && return (domain = unit, eps = 1.0, T = 0.5, N = 200,
+        init = x -> (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)))
+    name == :bump && return (domain = unit, eps = 1.0, T = 2.0, N = 200, scheme = DISSIPATION,
+        init = x -> (1 .+ 0.5exp.(-(x .- 0.5) .^ 2 ./ 0.005), one.(x)))
+    name == :step && return (domain = unit, eps = 0.1, T = 1.0, N = 200, scheme = DISSIPATION,
+        init = x -> (ifelse.(0.25 .< x .< 0.75, 1.0, 0.5), zero(x)))
+    name == :expansion && return (domain = unit, eps = 1.0, T = 0.6, N = 200, scheme = DISSIPATION,
+        init = x -> (one.(x), sinpi.(2x)))
+    if name == :soliton
+        c, a, b = 1.3, 0.0, 40.0
+        exact = soliton_exact(SolitonProfile(c, 1.0, (b - a) / 2), a, b)
+        return (domain = (a, b), eps = 1.0, T = (b - a) / c, N = 400, scheme = DISSIPATION,
+            exact = exact, init = x -> exact(x, 0.0)[1:2])
+    end
+    name == :ap && return (domain = unit, eps = 1.0, T = 0.2, N = 200, scheme = DISSIPATION,
+        timestep = TimeStep(mode = :fixed, cfl = 0.25),
+        init = x -> (1 .+ 0.2sinpi.(2x), 0.2cospi.(2x)))
+    name == :simplewave && return (domain = unit, eps = 1e-4, T = 0.3, N = 200, scheme = DISSIPATION,
+        timestep = TimeStep(dtmax = 0.4), exact = simplewave_exact,
+        init = x -> simplewave_exact(x, 0.0)[1:2])
+    name == :riemann && return (domain = (-80.0, 100.0), eps = 1e-4, T = 8.0, N = 2000,
+        snapshots = [4.0], exact = riemann_exact, init = x -> riemann_exact(x, 0.0)[1:2],
+        diagnostics = riemann_diagnostics)
     throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
 end
 
@@ -42,4 +69,15 @@ function solve(case::TestCase)
     ρ0, u0 = case.init(g.x)
     return solve(ρ0, u0, g, case.eps, case.T; scheme = case.scheme, timestep = case.timestep,
                  snapshots = case.snapshots)
+end
+
+"Shock speed (x_s(T) - x_s(T₁))/(T - T₁) and its relative error (§5.5)."
+function riemann_diagnostics(case, res)
+    isempty(res.snapshots) && return Pair{String,Any}[]
+    t1, ρ1 = res.snapshots[1][1], res.snapshots[1][2]
+    g = res.grid
+    s = (shock_position(g.x, res.rho, res.t, g.dx) - shock_position(g.x, ρ1, t1, g.dx)) / (res.t - t1)
+    us = riemann_speeds(0.5)[2]
+    return Pair{String,Any}["shock_speed" => s, "shock_speed_exact" => us,
+                            "shock_speed_rel_error" => abs(s - us) / us]
 end

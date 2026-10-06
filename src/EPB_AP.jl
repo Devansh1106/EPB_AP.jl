@@ -8,6 +8,7 @@ include("boundary.jl")
 include("grid.jl")
 include("scheme.jl")
 include("solve.jl")
+include("exact.jl")
 include("testcases.jl")
 include("output.jl")
 
