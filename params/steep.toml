@@ -1,0 +1,16 @@
+# Parameters of the test case `steep`: steep periodic solution (§5.2). See SPEC §7.
+case = "steep"       # initial data (and exact solution) of this case
+domain = [0.0, 1.0]  # [a, b]
+N = 200              # number of cells
+lambda = 1.0         # scale parameter λ of the Poisson equation
+T = 0.5              # final time
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "shift"       # "shift" (§3.3) or "dissipation" (§3.4)
+eta = "local"        # "local" or "global" edge coefficient η
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = inf          # upper bound on Δt/Δx

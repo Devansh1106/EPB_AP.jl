@@ -57,15 +57,16 @@ function solution_columns(case, x, t, ρ, u, φ)
 end
 
 """
-    run_case(name; dir = "data", kwargs...) -> (result, paths)
+    run_case(name_or_file; dir = "data", kwargs...) -> (result, paths)
 
-Solve test case `name` (keywords as in [`testcase`](@ref)) and write CSV files to `dir`:
+Solve a test case, given by name (`params/<name>.toml`) or by parameter file, with keywords as in
+[`testcase`](@ref), and write CSV files to `dir`:
 the solution at the final time, one file per snapshot, and the per-step history.
 """
-function run_case(name::Symbol; dir = "data", kw...)
-    case = testcase(name; kw...)
+function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
+    case = testcase(src; kw...)
     res = solve(case)
-    base = joinpath(dir, "$(name)_$(case.scheme.kind)_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
+    base = joinpath(dir, "$(case.name)_$(case.scheme.kind)_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
     paths = String[]
     for (t, ρ, u, φ) in res.snapshots
         meta = case_meta(case, res, t)

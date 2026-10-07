@@ -1,7 +1,7 @@
 """
     TestCase
 
-A test problem of SPEC §7: periodic domain, initial data `init(x) -> (ρ, u)`, default λ, T, N,
+A test problem of SPEC §7, built from a parameter file: periodic domain, initial data `init(x) -> (ρ, u)`, default λ, T, N,
 scheme and time-step rule, an optional `exact(x, t) -> (ρ, u, φ)`, snapshot times and
 `diagnostics(case, result) -> Vector{Pair}` written to the data file header.
 """
@@ -21,47 +21,52 @@ end
 
 const CASES = (:smooth, :steep, :nearvacuum, :bump, :step, :expansion, :soliton, :ap, :simplewave, :riemann)
 
-const DISSIPATION = Scheme(kind = :dissipation)
+"Directory of the parameter files `<case>.toml`, one per case of `CASES`."
+const PARAMS = joinpath(dirname(@__DIR__), "params")
 
-function case_defaults(name::Symbol)
-    unit = (0.0, 1.0)
-    name == :smooth && return (domain = unit, lambda = 1.0, T = 0.5, N = 200,
-        init = x -> (1 .+ 0.3sinpi.(2x), 0.2cospi.(2x)))
-    name == :steep && return (domain = unit, lambda = 1.0, T = 0.5, N = 200,
-        init = x -> (1 .+ 0.8sinpi.(2x) .^ 3, 0.25cospi.(2x)))
-    name == :nearvacuum && return (domain = unit, lambda = 1.0, T = 0.5, N = 200,
-        init = x -> (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)))
-    name == :bump && return (domain = unit, lambda = 1.0, T = 2.0, N = 200, scheme = DISSIPATION,
-        init = x -> (1 .+ 0.5exp.(-(x .- 0.5) .^ 2 ./ 0.005), one.(x)))
-    name == :step && return (domain = unit, lambda = 0.1, T = 1.0, N = 200, scheme = DISSIPATION,
-        init = x -> (ifelse.(0.25 .< x .< 0.75, 1.0, 0.5), zero(x)))
-    name == :expansion && return (domain = unit, lambda = 1.0, T = 0.6, N = 200, scheme = DISSIPATION,
-        init = x -> (one.(x), sinpi.(2x)))
+# Initial data, exact solution and diagnostics of a case; `p` holds the `[init]` table of its file.
+function problem(name::Symbol, domain, λ, p)
+    name == :smooth && return (init = x -> (1 .+ 0.3sinpi.(2x), 0.2cospi.(2x)),)
+    name == :steep && return (init = x -> (1 .+ 0.8sinpi.(2x) .^ 3, 0.25cospi.(2x)),)
+    name == :nearvacuum && return (init = x -> (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)),)
+    name == :bump && return (init = x -> (1 .+ 0.5exp.(-(x .- 0.5) .^ 2 ./ 0.005), one.(x)),)
+    name == :step && return (init = x -> (ifelse.(0.25 .< x .< 0.75, 1.0, 0.5), zero(x)),)
+    name == :expansion && return (init = x -> (one.(x), sinpi.(2x)),)
     if name == :soliton
-        c, a, b = 1.3, 0.0, 40.0
-        exact = soliton_exact(SolitonProfile(c, 1.0, (b - a) / 2), a, b)
-        return (domain = (a, b), lambda = 1.0, T = (b - a) / c, N = 400, scheme = DISSIPATION,
-            exact = exact, init = x -> exact(x, 0.0)[1:2])
+        a, b = domain
+        exact = soliton_exact(SolitonProfile(p["c"], λ, (b - a) / 2), a, b)
+        return (exact = exact, init = x -> exact(x, 0.0)[1:2])
     end
-    name == :ap && return (domain = unit, lambda = 1.0, T = 0.2, N = 200, scheme = DISSIPATION,
-        timestep = TimeStep(mode = :fixed, cfl = 0.25),
-        init = x -> (1 .+ 0.2sinpi.(2x), 0.2cospi.(2x)))
-    name == :simplewave && return (domain = unit, lambda = 1e-4, T = 0.3, N = 200, scheme = DISSIPATION,
-        timestep = TimeStep(dtmax = 0.4), exact = simplewave_exact,
-        init = x -> simplewave_exact(x, 0.0)[1:2])
-    name == :riemann && return (domain = (-80.0, 100.0), lambda = 1e-4, T = 8.0, N = 2000,
-        snapshots = [4.0], exact = riemann_exact, init = x -> riemann_exact(x, 0.0)[1:2],
-        diagnostics = riemann_diagnostics)
+    name == :ap && return (init = x -> (1 .+ 0.2sinpi.(2x), 0.2cospi.(2x)),)
+    name == :simplewave && return (exact = simplewave_exact, init = x -> simplewave_exact(x, 0.0)[1:2])
+    name == :riemann && return (exact = riemann_exact, init = x -> riemann_exact(x, 0.0)[1:2],
+                                diagnostics = riemann_diagnostics)
     throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
 end
 
-"""
-    testcase(name; kwargs...)
+symbols(d) = (; (Symbol(k) => (v isa String ? Symbol(v) : v) for (k, v) in d)...)
 
-Test case `name` (one of `EPB_AP.CASES`) with defaults from SPEC §7; any field of
-[`TestCase`](@ref) (e.g. `lambda`, `T`, `N`, `scheme`, `timestep`) can be overridden.
 """
-testcase(name::Symbol; kw...) = TestCase(; name, case_defaults(name)..., kw...)
+    testcase(name::Symbol; kwargs...)
+    testcase(file::AbstractString; kwargs...)
+
+Test case read from its parameter file, `params/<name>.toml` or any `file` of the same form
+(SPEC §7). Keywords override fields of [`TestCase`](@ref), e.g. `lambda`, `T`, `N`, `scheme`.
+"""
+function testcase(name::Symbol; kw...)
+    name in CASES || throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
+    return testcase(joinpath(PARAMS, "$name.toml"); kw...)
+end
+
+function testcase(file::AbstractString; kw...)
+    p = TOML.parsefile(file)
+    name, domain = Symbol(p["case"]), Tuple(float.(p["domain"]))
+    λ = get(kw, :lambda, p["lambda"])
+    return TestCase(; name, domain, lambda = λ, T = p["T"], N = p["N"],
+                    snapshots = float.(p["snapshots"]), scheme = Scheme(; symbols(p["scheme"])...),
+                    timestep = TimeStep(; symbols(p["timestep"])...),
+                    problem(name, domain, λ, get(p, "init", Dict()))..., kw...)
+end
 
 "Run a test case: `solve` on its grid with its defaults."
 function solve(case::TestCase)

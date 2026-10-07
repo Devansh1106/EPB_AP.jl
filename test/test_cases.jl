@@ -10,6 +10,14 @@ using EPB_AP: CASES, lap, riemann_speeds, SolitonProfile
     end
     @test testcase(:smooth; lambda = 1e-2, N = 50).lambda == 1e-2
     @test_throws ArgumentError testcase(:nope)
+    # parameter files: the values of SPEC §7, and a user file of the same form
+    c = testcase(:soliton)
+    @test c.domain == (0.0, 40.0) && c.N == 400 && c.T ≈ 40 / 1.3 && c.scheme == Scheme(kind = :dissipation)
+    @test testcase(:ap).timestep == TimeStep(mode = :fixed, cfl = 0.25)
+    file = joinpath(mktempdir(), "mine.toml")
+    write(file, replace(read(joinpath(EPB_AP.PARAMS, "step.toml"), String), "N = 200" => "N = 64"))
+    c = testcase(file)
+    @test c.name == :step && c.N == 64 && c.lambda == 0.1 && c.scheme.kind == :dissipation
 end
 
 @testset "exact solutions" begin

@@ -1,6 +1,6 @@
 # Convergence study for one test case on a sequence of refined grids.
 #
-#   julia --project=scripts scripts/convergence.jl <case> [--scheme shift|dissipation] [--lambda λ] [--T T]
+#   julia --project=scripts scripts/convergence.jl <case | file.toml> [--scheme shift|dissipation] [--lambda λ] [--T T]
 #         [--N 100,200,400,800] [--dtmax c] [--var rho|u|phi|m] [--ref Nref]
 #
 # Errors are measured against the exact solution when the case has one; otherwise against a
@@ -10,7 +10,7 @@ using EPB_AP, Printf
 function parse_args(args)
     isempty(args) && error("usage: convergence.jl <case> [--scheme ..] [--lambda ..] [--T ..] [--N ..] [--dtmax ..] [--var ..] [--ref ..]")
     opts = Dict(args[i][3:end] => args[i+1] for i in 2:2:length(args)-1)
-    return Symbol(args[1]), opts
+    return endswith(args[1], ".toml") ? args[1] : Symbol(args[1]), opts
 end
 
 field(r, var) = var == "rho" ? r.rho : var == "u" ? r.u : var == "phi" ? r.phi : r.rho .* r.u
@@ -39,7 +39,7 @@ function main(args)
         println("Reference: exact solution.")
     end
     @printf("case = %s, scheme = %s, λ = %g, T = %g, variable = %s\n",
-            name, case.scheme.kind, case.lambda, case.T, var)
+            case.name, case.scheme.kind, case.lambda, case.T, var)
     @printf("%6s  %11s %6s  %11s %6s  %11s %6s\n", "N", "L1", "order", "L2", "order", "Linf", "order")
     prev = nothing
     for N in Ns

@@ -1,0 +1,19 @@
+# Parameters of the test case `simplewave`: isothermal simple wave (§5.6). See SPEC §7.
+case = "simplewave"  # initial data (and exact solution) of this case
+domain = [0.0, 1.0]  # [a, b]
+N = 200              # number of cells
+lambda = 1e-4        # scale parameter λ of the Poisson equation
+T = 0.3              # final time
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "dissipation" # "shift" (§3.3) or "dissipation" (§3.4)
+eta = "local"        # "local" or "global" edge coefficient η
+theta = 0.5          # θ of Corollary 3.17
+kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
+kappa_s = 0.0
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = 0.4          # upper bound on Δt/Δx
