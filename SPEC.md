@@ -5,99 +5,140 @@ Source: Arun & Ghorai, *A collocated finite volume scheme for the Euler–Poisso
 
 ## 1. Equations (1)–(3)
 
-    ∂t ρ + ∂x(ρu) = 0,   ∂t(ρu) + ∂x(ρu²) = −ρ ∂x φ,   −ε² ∂xx φ + e^φ = ρ.
+```math
+\partial_t \rho + \partial_x(\rho u) = 0, \qquad
+\partial_t(\rho u) + \partial_x(\rho u^2) = -\rho\, \partial_x \phi, \qquad
+-\varepsilon^2 \partial_{xx} \phi + e^{\phi} = \rho .
+```
 
-All problems: periodic interval, N uniform cells, centres x_i = a + (i−½)Δx, all unknowns cell centred (6).
+All problems: periodic interval, $N$ uniform cells, centres $x_i = a + (i-\tfrac12)\Delta x$, all unknowns cell centred (6).
 
 ## 2. Discrete framework (§2)
 
-* Edge e = i+½, indices mod N. (∂E q)_e = (q_{i+1}−q_i)/Δx, (divM v)_i = (v_{i+½}−v_{i−½})/Δx, ΔM = divM∘∂E (8).
-* Log mean LM(a,b) = (b−a)/(log b − log a), LM(a,a)=a (9). Harmonic edge mean 1/ρʰ_e = ½(1/ρ_i + 1/ρ_{i+1}) (11).
-* {u}_e = ½(u_i+u_{i+1}), Δu_e = u_{i+1}−u_i, a^± = ½(a±|a|) (12).
-* Energy (14): E_h = Σ Δx ½ρ_i u_i² + Σ Δx e^{φ_i}(φ_i−1) + (ε²/2) Σ_e Δx (∂E φ)_e².
-* Source (15): S_i = −½[ ρ̄_{i+½}(∂E φ)_{i+½} + ρ̄_{i−½}(∂E φ)_{i−½} ].
+* Edge $e = i+\tfrac12$, indices mod $N$. $(\partial_E q)_e = (q_{i+1}-q_i)/\Delta x$,
+  $(\mathrm{div}_M v)_i = (v_{i+1/2}-v_{i-1/2})/\Delta x$, $\Delta_M = \mathrm{div}_M \circ \partial_E$ (8).
+* Log mean $\mathrm{LM}(a,b) = (b-a)/(\log b - \log a)$, $\mathrm{LM}(a,a) = a$ (9).
+  Harmonic edge mean $1/\rho^h_e = \tfrac12(1/\rho_i + 1/\rho_{i+1})$ (11).
+* $\lbrace u\rbrace_e = \tfrac12(u_i+u_{i+1})$, $\Delta u_e = u_{i+1}-u_i$, $a^\pm = \tfrac12(a \pm \lvert a\rvert)$ (12).
+* Energy (14):
+```math
+E_h = \sum_i \Delta x\, \tfrac12 \rho_i u_i^2 + \sum_i \Delta x\, e^{\phi_i}(\phi_i - 1)
+      + \frac{\varepsilon^2}{2} \sum_e \Delta x\, (\partial_E \phi)_e^2 .
+```
+* Source (15): $S_i = -\tfrac12\big[\bar\rho_{i+1/2}(\partial_E\phi)_{i+1/2} + \bar\rho_{i-1/2}(\partial_E\phi)_{i-1/2}\big]$.
 
 ## 3. Fluxes (17)–(19)
 
-ρ̄_e = LM(ρ_i, ρ_{i+1}); F_e = ρ̄_e{u}_e − Q_e; G_e = u^up_e F_e with u^up_e = u_i if F_e ≥ 0, else u_{i+1}.
+$\bar\rho_e = \mathrm{LM}(\rho_i, \rho_{i+1})$; $F_e = \bar\rho_e \lbrace u\rbrace_e - Q_e$;
+$G_e = u^{up}_e F_e$ with $u^{up}_e = u_i$ if $F_e \ge 0$, else $u_{i+1}$.
 
 ## 4. Scheme A — §3.3 (Theorem 3.5), `scheme = :shift`
 
-Step (27)–(29): ρ^{n+1} = ρ^n − Δt divM F; (ρu)^{n+1} = (ρu)^n − Δt divM G + Δt S; −ε²ΔM φ^{n+1} + e^{φ^{n+1}} = ρ^{n+1};
-F, G with ρ̄^n, u^n and Q_e = η_e Δt (∂E φ^{n+1})_e; S with ρ̄^n, φ^{n+1}.
-* η_e = (5/4)(ρ̄^n_e)²/ρ^{n,h}_e (43). Option `eta = :global`: max_e of (43) at every edge (§5.2).
-* Time step (44): X = Δt/Δx ≤ (2/5)ρ_i / (A_i + √(A_i² + (4/5)C_i ρ_i)), A_i = Σ_{e∈N(i)} ρ̄_e|{u}_e|,
-  **C_i = Δx Σ_{e∈N(i)} η_e |(∂E φ^n)_e|** (see §8 item 1). Root used as is; min over i.
-* A posteriori (CFL): (Δt/Δx)(|F_{i+½}|+|F_{i−½}|) ≤ ρ^n_i/5 with the computed F; if violated, repeat the step
-  with Δt multiplied by the smallest ratio (ρ_i/5)/(…) over i.
+Step (27)–(29):
+```math
+\rho^{n+1} = \rho^n - \Delta t\, \mathrm{div}_M F, \qquad
+(\rho u)^{n+1} = (\rho u)^n - \Delta t\, \mathrm{div}_M G + \Delta t\, S, \qquad
+-\varepsilon^2 \Delta_M \phi^{n+1} + e^{\phi^{n+1}} = \rho^{n+1},
+```
+with $F, G$ built from $\bar\rho^n, u^n$ and $Q_e = \eta_e \Delta t\, (\partial_E \phi^{n+1})_e$; $S$ from $\bar\rho^n, \phi^{n+1}$.
+* $\eta_e = \tfrac54 (\bar\rho^n_e)^2/\rho^{n,h}_e$ (43). Option `eta = :global`: $\max_e$ of (43) at every edge (§5.2).
+* Time step (44), with $X = \Delta t/\Delta x$ and the minimum over $i$:
+```math
+X \le \frac{\tfrac25 \rho_i}{A_i + \sqrt{A_i^2 + \tfrac45 C_i \rho_i}}, \qquad
+A_i = \sum_{e \in \mathcal N(i)} \bar\rho_e \lvert\lbrace u\rbrace_e\rvert, \qquad
+C_i = \Delta x \sum_{e \in \mathcal N(i)} \eta_e \lvert(\partial_E \phi^n)_e\rvert
+```
+  ($C_i$ with $\Delta x$: see §9 item 1).
+* A posteriori (CFL): $\frac{\Delta t}{\Delta x}\big(\lvert F_{i+1/2}\rvert + \lvert F_{i-1/2}\rvert\big) \le \rho^n_i/5$
+  with the computed $F$; if violated, repeat the step with $\Delta t$ multiplied by the smallest ratio over $i$.
 
 ## 5. Scheme B — §3.4, linearised variant (52), `scheme = :dissipation`
 
-Same as A except Q_e = μ_e(∂E φ^{n+1})_e − κε²(∂E ΔM φ^{n+1})_e (46), μ_e = η_e Δt + κ ρ̂^n_e,
-ρ̂^n_e = LM(e^{φ^n_i}, e^{φ^n_{i+1}}), ν_e = 0.
-* θ = ½; η_e = (ρ̄^n_e)²/(2(1−θ)ρ^{n,h}_e) (Cor. 3.17(i)); κ^n = (Δx/2) max_i |u^n_i| (Remark 3.23).
-  For §5.6 "choice of κ": κ^n = c_κ Δx (max|u^n| + s_κ), (c_κ, s_κ) ∈ {(½,1),(½,0),(¼,0),(1/10,0)}.
-* Time step (Remark 3.22): c_e = ρ̄^n_e{u^n}_e − κ(∂E ρ^n)_e; outward c_{i,e} = +c_e (e=i+½), −c_e (e=i−½);
-  A_i = Σ c⁺_{i,e}, C_i = Δx Σ η_e|(∂E φ^n)_e|, X = 2θρ_i/(A_i + √(A_i² + 4θC_iρ_i)); Δt = 0.9 min_i X_i Δx,
-  also Δt ≤ 0.9Δx/(max|u^n|+1). A posteriori (CFLθ): b_i = (Δt/Δx)Σ_e F⁺_{i,e} ≤ θρ^n_i; retry as in §4.
+Same as A except (46)
+```math
+Q_e = \mu_e (\partial_E \phi^{n+1})_e - \kappa \varepsilon^2 (\partial_E \Delta_M \phi^{n+1})_e, \qquad
+\mu_e = \eta_e \Delta t + \kappa \hat\rho^n_e, \qquad
+\hat\rho^n_e = \mathrm{LM}\big(e^{\phi^n_i}, e^{\phi^n_{i+1}}\big), \qquad \nu_e = 0 .
+```
+* $\theta = \tfrac12$; $\eta_e = (\bar\rho^n_e)^2 / \big(2(1-\theta)\rho^{n,h}_e\big)$ (Cor. 3.17(i));
+  $\kappa^n = \tfrac{\Delta x}{2} \max_i \lvert u^n_i\rvert$ (Remark 3.23).
+  For §5.6 "choice of $\kappa$": $\kappa^n = c_\kappa \Delta x (\max\lvert u^n\rvert + s_\kappa)$,
+  $(c_\kappa, s_\kappa) \in \lbrace(\tfrac12,1), (\tfrac12,0), (\tfrac14,0), (\tfrac1{10},0)\rbrace$.
+* Time step (Remark 3.22): $c_e = \bar\rho^n_e \lbrace u^n\rbrace_e - \kappa(\partial_E\rho^n)_e$; outward
+  $c_{i,e} = +c_e$ ($e = i+\tfrac12$), $-c_e$ ($e = i-\tfrac12$);
+```math
+A_i = \sum_e c^+_{i,e}, \qquad C_i = \Delta x \sum_e \eta_e \lvert(\partial_E\phi^n)_e\rvert, \qquad
+X_i = \frac{2\theta\rho_i}{A_i + \sqrt{A_i^2 + 4\theta C_i \rho_i}}, \qquad
+\Delta t = \min\Big(0.9 \min_i X_i \Delta x,\ \frac{0.9\,\Delta x}{\max\lvert u^n\rvert + 1}\Big).
+```
+  A posteriori (CFLθ): $b_i = \frac{\Delta t}{\Delta x} \sum_e F^+_{i,e} \le \theta \rho^n_i$; retry as in §4.
 
 ## 6. Implicit solve (Remark 3.22), both schemes
 
-ρ* = ρ^n − Δt divM(ρ̄^n{u^n}). Solve for φ = φ^{n+1}:
-e^φ − ε²ΔM φ − Δt divM(μ ∂E φ) + κε²Δt ΔM²φ = ρ* (52)  (scheme A: μ = ηΔt, κ = 0).
-Newton with Jacobian diag(e^φ) + ε²L + ΔtL_μ + κε²ΔtL², L = −ΔM, periodic corners included; sparse SPD solve.
-Then F from (18), ρ^{n+1} from (27), so (29) holds by construction; u^{n+1} = (ρu)^{n+1}/ρ^{n+1}.
-φ⁰ from ρ⁰ by (29) (same solver, Δt = 0).
+$\rho^* = \rho^n - \Delta t\, \mathrm{div}_M(\bar\rho^n \lbrace u^n\rbrace)$. Solve for $\phi = \phi^{n+1}$ (scheme A: $\mu = \eta\Delta t$, $\kappa = 0$):
+```math
+e^{\phi} - \varepsilon^2 \Delta_M \phi - \Delta t\, \mathrm{div}_M(\mu\, \partial_E \phi) + \kappa\varepsilon^2 \Delta t\, \Delta_M^2 \phi = \rho^* \qquad (52)
+```
+Newton with Jacobian $\mathrm{diag}(e^\phi) + \varepsilon^2 L + \Delta t L_\mu + \kappa\varepsilon^2\Delta t L^2$, $L = -\Delta_M$,
+periodic corners included; sparse SPD solve. Then $F$ from (18), $\rho^{n+1}$ from (27), so (29) holds by construction;
+$u^{n+1} = (\rho u)^{n+1}/\rho^{n+1}$. $\phi^0$ from $\rho^0$ by (29) (same solver, $\Delta t = 0$).
 
-## 7. Test cases (all periodic; φ⁰ from (29))
+## 7. Test cases (all periodic; $\phi^0$ from (29))
 
-| case | domain | ρ⁰, u⁰ | ε | T | N | Δt | reference |
+| case | domain | $\rho^0$, $u^0$ | $\varepsilon$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
-| smooth (§5.2) | [0,1] | 1+0.3 sin2πx, 0.2 cos2πx | 1, 1e-2, 1e-4 | 0.5 (AP: 0.3; order: 0.2) | 200; order 100…800 | (44) | fine grid N=3200, cell-averaged |
-| steep (§5.2) | [0,1] | 1+0.8 sin³2πx, 0.25 cos2πx | 1, 1e-3 | 0.5 | 200 | (44) | none |
-| near vacuum (§5.2) | [0,1] | 1e-4+(1−1e-4)e^{−60(x−½)²}, 0 | 1, 1e-3 (η local/global: 1, 1e-2) | 0.5 (η study 0.3) | 200 | (44) | none |
-| bump (§5.6) | [0,1] | 1+½e^{−(x−½)²/0.005}, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
-| step (§5.6) | [0,1] | 1 on (¼,¾), ½ else; 0 | 0.1 | 1 | 200, 800, 3200 | scheme rule | min ρ stays ½ |
-| expansion (§5.6) | [0,1] | 1, sin2πx | 1, 0.1 | 0.6 | 200 (400, 1600 at ε=0.1) | scheme rule | ρ(0,T)→1/(1+2πT) |
-| soliton (§5.6) | [0,40] | travelling wave c=1.3, peak at x=20 | 1 | order 2; robustness L/c | 400; order 100…1600 | rule, ≤0.4Δx (order) | exact (translation) |
-| ap (§5.6) | [0,1] | 1+0.2 sin2πx, 0.2 cos2πx | 1 … 1e-6 | 0.2 | 200 | fixed 0.25Δx | ‖e^φ−ρ‖∞ ∝ ε² |
-| simple wave (§5.6) | [0,1] | e^{u⁰}, 0.2 sin2πx | 1e-4 | 0.3 | 100…1600 | rule, ≤0.4Δx | exact (characteristics) |
-| riemann (§5.5, [1, §7.4]) | [−80,100] | 1 / n_r=0.5 at x=0, u=0 | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | ICE solution [1, (7.8)–(7.10)] |
+| smooth (§5.2) | $[0,1]$ | $1+0.3\sin 2\pi x$, $0.2\cos 2\pi x$ | 1, 1e-2, 1e-4 | 0.5 (AP: 0.3; order: 0.2) | 200; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
+| steep (§5.2) | $[0,1]$ | $1+0.8\sin^3 2\pi x$, $0.25\cos 2\pi x$ | 1, 1e-3 | 0.5 | 200 | (44) | none |
+| near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 (η local/global: 1, 1e-2) | 0.5 (η study 0.3) | 200 | (44) | none |
+| bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
+| step (§5.6) | $[0,1]$ | 1 on $(\tfrac14,\tfrac34)$, $\tfrac12$ else; 0 | 0.1 | 1 | 200, 800, 3200 | scheme rule | $\min\rho$ stays $\tfrac12$ |
+| expansion (§5.6) | $[0,1]$ | 1, $\sin 2\pi x$ | 1, 0.1 | 0.6 | 200 (400, 1600 at $\varepsilon=0.1$) | scheme rule | $\rho(0,T) \to 1/(1+2\pi T)$ |
+| soliton (§5.6) | $[0,40]$ | travelling wave $c=1.3$, peak at $x=20$ | 1 | order 2; robustness $L/c$ | 400; order 100…1600 | rule, $\le 0.4\Delta x$ (order) | exact (translation) |
+| ap (§5.6) | $[0,1]$ | $1+0.2\sin 2\pi x$, $0.2\cos 2\pi x$ | 1 … 1e-6 | 0.2 | 200 | fixed $0.25\Delta x$ | $\lVert e^\phi-\rho\rVert_\infty \propto \varepsilon^2$ |
+| simple wave (§5.6) | $[0,1]$ | $e^{u^0}$, $0.2\sin 2\pi x$ | 1e-4 | 0.3 | 100…1600 | rule, $\le 0.4\Delta x$ | exact (characteristics) |
+| riemann (§5.5, [1, §7.4]) | $[-80,100]$ | 1 / $n_r=0.5$ at $x=0$, $u=0$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | ICE solution [1, (7.8)–(7.10)] |
 
 * Data files: `data/<case>_<scheme>_N<N>_eps<ε>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
-  snapshots, `…_history.csv` (t, Δt, E_h, min ρ, mass, ‖e^φ−ρ‖∞, CFL ratio); header lines `# key = value`.
-* Soliton: u = c − √(c²−2φ), ρ = c/√(c²−2φ), ε²(φ′)² = 2V(φ), V = e^φ − 1 + c(√(c²−2φ) − c);
-  φ_max from V(φ_max)=0. Computed by integrating ε²φ″ = e^φ − ρ(φ) from (φ_max, 0) with RK4 (h = 10⁻³) and
-  Hermite interpolation; exact solution at t is the profile at ξ = x − 20 − ct (periodic).
-* Simple wave: u(x,t) = u⁰(ξ), x = ξ + (u⁰(ξ)+1)t (Newton in ξ), ρ = e^u, φ = log ρ.
-* Riemann: u_m solves (1 − n_r e^{u_m})(u_m² − 2u_m − 2 log n_r) − 2u_m² = 0, u_s = u_m/(1 − n_r e^{u_m}).
-  Shock speed (x_s(8) − x_s(4))/4, x_s by equal areas over [x_a, 60], x_a = ½(u_m−1+u_s)t.
-* Unit-test states (no time integration, §5.3 order-1 column): smooth, steep (u⁰ = 0.5cos), near vacuum,
-  shock-like (1, 0.4 | 0.3, −0.4 at x=½), random rough (ρ = 0.5+r, u = 2s−1, `Random.seed!(20260923)`).
+  snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
+* Soliton: $u = c - \sqrt{c^2-2\phi}$, $\rho = c/\sqrt{c^2-2\phi}$, $\varepsilon^2(\phi')^2 = 2V(\phi)$,
+  $V = e^\phi - 1 + c\big(\sqrt{c^2-2\phi} - c\big)$; $\phi_{max}$ from $V(\phi_{max}) = 0$. Computed by integrating
+  $\varepsilon^2\phi'' = e^\phi - \rho(\phi)$ from $(\phi_{max}, 0)$ with RK4 ($h = 10^{-3}$) and Hermite interpolation;
+  the exact solution at $t$ is the profile at $\xi = x - 20 - ct$ (periodic).
+* Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
+* Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
+  Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, 60]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
+* Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,
+  shock-like ($1, 0.4 \mid 0.3, -0.4$ at $x = \tfrac12$), random rough ($\rho = 0.5+r$, $u = 2s-1$, `Random.seed!(20260923)`).
 
 ## 8. Properties checked by tests
 
-Mass conservation to round-off; positivity ρ^{n+1} ≥ ⅘ρ^n (A) / (1−θ)ρ^n (B); E_h^{n+1} ≤ E_h^n per step
-(tolerance 10³ϵ_mach max(1,|E⁰|)); semidiscrete rate (93) equals (23) with D ≡ 0; one-step random states
-(Theorem 3.16); ‖e^φ − ρ‖∞ falls ≈100× per decade of ε; observed order ≈ 1.
+Mass conservation to round-off; positivity $\rho^{n+1} \ge \tfrac45\rho^n$ (A) / $(1-\theta)\rho^n$ (B);
+$E_h^{n+1} \le E_h^n$ per step (tolerance $10^3\epsilon_{mach}\max(1,\lvert E^0\rvert)$); semidiscrete rate (93) equals (23)
+with $D \equiv 0$; one-step random states (Theorem 3.16); $\lVert e^\phi - \rho\rVert_\infty$ falls ≈100× per decade of
+$\varepsilon$; observed order ≈ 1.
 
 ## 9. Unclear items and the reading used
 
-1. (44) prints C_i without Δx; the derivation, Remark 3.22 and (90) need C_i = Δx Σ η|∂φ|. **Used: with Δx** (author's
-   decision). Note: the printed form reproduces the §5.2 tables to all digits, so those step counts and energy
-   changes differ here; all properties (positivity, energy decrease, AP, order) hold with either form.
-2. Soliton robustness T is missing: **T = L/c = 40/1.3** (one domain traversal, Degond et al. t_L, as instructed).
-3. Riemann data from [1, §7.4]: domain [−80,100], ε = 1e-4, n_r = 0.5 only, log mean only; posed **periodic** as all
-   problems here (manuscript §5), not with the BCs of [1]; the exact solution ignores the waves from the
-   periodic wrap point, which stay outside [−60, 80] for t ≤ 8. Run with scheme A.
+1. (44) prints $C_i$ without $\Delta x$; the derivation, Remark 3.22 and (90) need
+   $C_i = \Delta x \sum_e \eta_e \lvert\partial_E\phi\rvert$. **Used: with $\Delta x$** (author's decision). Note: the
+   printed form reproduces the §5.2 tables to all digits, so those step counts and energy changes differ here;
+   all properties (positivity, energy decrease, AP, order) hold with either form.
+2. Soliton robustness $T$ is missing: **$T = L/c = 40/1.3$** (one domain traversal, Degond et al. $t_L$, as instructed).
+3. Riemann data from [1, §7.4]: domain $[-80,100]$, $\varepsilon = 10^{-4}$, $n_r = 0.5$ only, log mean only; posed
+   **periodic** as all problems here (manuscript §5), not with the BCs of [1]; the exact solution ignores the waves
+   from the periodic wrap point, which stay outside $[-60, 80]$ for $t \le 8$. Run with scheme A.
 4. §5.6 uses the linearised variant (52); the literal variant (45) is not implemented (same within 3–4 digits per the
-   manuscript). ν_e = 0.
-5. Soliton: the text writes ε²(φ′)² = V but the quadrature ξ = ε∫dφ/√(2V) and a direct derivation give ε²(φ′)² = 2V; used 2V.
-6. Newton stop: ‖δφ‖∞ ≤ 10⁻¹²(1+‖φ‖∞), or ‖R‖∞ ≤ 10⁻¹⁴ s (1+‖φ‖∞) with s = max diag J (the stencil scale of
-   Remark 4.13); max 50 iterations; each update damped to ‖δφ‖∞ ≤ 1.
-7. Collapse: Δt < 10⁻⁴Δx stops the run (§5.6). The last step is shortened to hit T (and snapshot times).
-8. Random one-step states (§5.1) are loosely specified: 48 cells, log ρ ~ N(0, σ²), σ ∈ (0,3], optionally smoothed by
-   a 3-point average; u = A·N(0,1), A ∈ (0,3]; ε log-uniform in [1e-4,10]; θ ∈ {0.2,0.5,0.8};
-   κ = 10^U · (Δx/2)(max|u|+1), U ~ U(−1,1); Δt halved from 1 until (CFLθ) holds.
-9. Errors: discrete norms Δx Σ|e_i| (L¹), (Δx Σ e_i²)^{½} (L²), max|e_i| (L∞) at cell centres; fine-grid
-   references are restricted by averaging blocks of N_ref/N cells.
+   manuscript). $\nu_e = 0$.
+5. Soliton: the text writes $\varepsilon^2(\phi')^2 = V$ but the quadrature $\xi = \varepsilon\int d\phi/\sqrt{2V}$ and a
+   direct derivation give $\varepsilon^2(\phi')^2 = 2V$; used $2V$.
+6. Newton stop: $\lVert\delta\phi\rVert_\infty \le 10^{-12}(1+\lVert\phi\rVert_\infty)$, or
+   $\lVert R\rVert_\infty \le 10^{-14}\, s\, (1+\lVert\phi\rVert_\infty)$ with $s = \max \mathrm{diag}\, J$ (the stencil
+   scale of Remark 4.13); max 50 iterations; each update damped to $\lVert\delta\phi\rVert_\infty \le 1$.
+7. Collapse: $\Delta t < 10^{-4}\Delta x$ stops the run (§5.6). The last step is shortened to hit $T$ (and snapshot times).
+8. Random one-step states (§5.1) are loosely specified: 48 cells, $\log\rho \sim N(0,\sigma^2)$, $\sigma \in (0,3]$,
+   optionally smoothed by a 3-point average; $u = A\cdot N(0,1)$, $A \in (0,3]$; $\varepsilon$ log-uniform in
+   $[10^{-4}, 10]$; $\theta \in \lbrace 0.2, 0.5, 0.8\rbrace$; $\kappa = 10^U \cdot \tfrac{\Delta x}{2}(\max\lvert u\rvert+1)$,
+   $U \sim U(-1,1)$; $\Delta t$ halved from 1 until (CFLθ) holds.
+9. Errors: discrete norms $\Delta x\sum_i\lvert e_i\rvert$ ($L^1$), $(\Delta x\sum_i e_i^2)^{1/2}$ ($L^2$),
+   $\max_i\lvert e_i\rvert$ ($L^\infty$) at cell centres; fine-grid references are restricted by averaging blocks of
+   $N_{ref}/N$ cells.
