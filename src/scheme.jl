@@ -97,7 +97,8 @@ outward(F, i) = (F[i], -F[left(i, length(F))])
 """
     stable_dt(ρ, u, φ, dx, η, κ, sch)
 
-Time step from (44) (`:shift`, with C_i = Δx Σ η|∂E φⁿ|) or Remark 3.22 (`:dissipation`).
+Time step from (44) (`:shift`, with C_i = Δx Σ η|∂E φⁿ|) or Remark 3.22 times 0.9 (`:dissipation`);
+no other bound (SPEC §5).
 """
 function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme)
     N = length(ρ)
@@ -119,7 +120,7 @@ function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme)
         C = dx * (d[i] + d[left(i, N)])
         X = min(X, 2θ * ρ[i] / (A + sqrt(A^2 + 4θ * C * ρ[i])))
     end
-    return min(0.9X * dx, 0.9dx / (maximum(abs, u) + 1))
+    return 0.9X * dx
 end
 
 """
