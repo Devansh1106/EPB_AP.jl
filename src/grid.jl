@@ -52,13 +52,13 @@ end
 harmonic(a, b) = 2a * b / (a + b)
 
 """
-    energy(ρ, u, φ, ε, dx)
+    energy(ρ, u, φ, λ, dx)
 
 Discrete energy (14).
 """
-function energy(ρ, u, φ, ε, dx)
+function energy(ρ, u, φ, λ, dx)
     ekin = dx * sum(@. ρ * u^2 / 2)
     eel = dx * sum(@. exp(φ) * (φ - 1))
-    efield = ε^2 / 2 * dx * sum(abs2, grad(φ, dx))
+    efield = λ^2 / 2 * dx * sum(abs2, grad(φ, dx))
     return ekin + eel + efield
 end

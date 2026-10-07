@@ -17,8 +17,8 @@ or, from a clone: `julia --project -e 'using Pkg; Pkg.instantiate(); Pkg.test()'
 
 ```julia
 using EPB_AP
-run_case(:step)                                      # writes data/step_dissipation_N200_eps0.1_T1.0*.csv
-run_case(:smooth; eps = 1e-2, scheme = Scheme())     # override any default
+run_case(:step)                                      # writes data/step_dissipation_N200_lambda0.1_T1.0*.csv
+run_case(:smooth; lambda = 1e-2, scheme = Scheme())  # override any default
 ```
 Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann`.
 
@@ -26,7 +26,7 @@ Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewav
 
 ```sh
 julia --project=scripts -e 'using Pkg; Pkg.instantiate()'    # once
-julia --project=scripts scripts/plot.jl data/step_dissipation_N200_eps0.1_T1.0.csv
+julia --project=scripts scripts/plot.jl data/step_dissipation_N200_lambda0.1_T1.0.csv
 ```
 
 ## Convergence

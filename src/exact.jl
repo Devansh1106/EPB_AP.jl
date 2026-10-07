@@ -1,9 +1,9 @@
 # Exact and reference solutions (SPEC §7). Each returns (ρ, u, φ) at the points x and time t.
 
 """
-    SolitonProfile(c, ε, ξmax; h = 1e-3)
+    SolitonProfile(c, λ, ξmax; h = 1e-3)
 
-Ion-acoustic travelling wave of speed c (§5.1): ε² φ'' = e^φ - ρ(φ), ρ = c/√(c² - 2φ),
+Ion-acoustic travelling wave of speed c (§5.1): λ² φ'' = e^φ - ρ(φ), ρ = c/√(c² - 2φ),
 integrated by RK4 from the crest (φ_max, 0), where V(φ_max) = 0.
 """
 struct SolitonProfile
@@ -13,14 +13,14 @@ struct SolitonProfile
     dphi::Vector{Float64}
 end
 
-function SolitonProfile(c, ε, ξmax; h = 1e-3)
+function SolitonProfile(c, λ, ξmax; h = 1e-3)
     V(φ) = exp(φ) - 1 + c * (sqrt(c^2 - 2φ) - c)
     lo, hi = 1e-3, c^2 / 2                  # V(lo) > 0 > V(hi) for c > 1
     for _ in 1:200
         mid = (lo + hi) / 2
         V(mid) > 0 ? (lo = mid) : (hi = mid)
     end
-    f(φ, ψ) = (ψ, (exp(φ) - c / sqrt(c^2 - 2φ)) / ε^2)
+    f(φ, ψ) = (ψ, (exp(φ) - c / sqrt(c^2 - 2φ)) / λ^2)
     n = ceil(Int, ξmax / h) + 1
     φ, ψ = zeros(n + 1), zeros(n + 1)
     φ[1] = lo

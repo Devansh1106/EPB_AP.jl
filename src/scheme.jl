@@ -4,7 +4,7 @@
 First-order fully discrete scheme.
 
 * `kind = :shift`: §3.3 (Theorem 3.5), `Q = η Δt ∂E φⁿ⁺¹`, η from (43), time step (44), (CFL).
-* `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ ε² ∂E ΔM φⁿ⁺¹`,
+* `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ λ² ∂E ΔM φⁿ⁺¹`,
   `μ = η Δt + κ ρ̂ⁿ`, η from Corollary 3.17(i), time step of Remark 3.22, (CFLθ).
 * `eta = :global` uses the maximum of the edge coefficient at every edge (§5.2).
 * `κⁿ = kappa_c Δx (max|uⁿ| + kappa_s)` (Remark 3.23; only for `:dissipation`).
@@ -37,17 +37,17 @@ function gradient_matrix(N, dx)
 end
 
 """
-    solve_potential(φ, rhs, μ, κ, ε, dt, dx)
+    solve_potential(φ, rhs, μ, κ, λ, dt, dx)
 
-Newton's method for (52): `e^φ - ε² ΔM φ - Δt divM(μ ∂E φ) + κ ε² Δt ΔM² φ = rhs`, starting from `φ`.
+Newton's method for (52): `e^φ - λ² ΔM φ - Δt divM(μ ∂E φ) + κ λ² Δt ΔM² φ = rhs`, starting from `φ`.
 The Jacobian is the SPD matrix of Remark 3.22, periodic corners included.
 """
-function solve_potential(φ, rhs, μ, κ, ε, dt, dx; tol = 1e-12, maxit = 50)
+function solve_potential(φ, rhs, μ, κ, λ, dt, dx; tol = 1e-12, maxit = 50)
     N = length(φ)
     D = gradient_matrix(N, dx)
     L = D' * D
-    A = ε^2 * L + dt * (D' * spdiagm(0 => μ) * D)
-    κ > 0 && (A += κ * ε^2 * dt * (L * L))
+    A = λ^2 * L + dt * (D' * spdiagm(0 => μ) * D)
+    κ > 0 && (A += κ * λ^2 * dt * (L * L))
     φ = copy(φ)
     for _ in 1:maxit
         e = exp.(φ)
@@ -64,24 +64,24 @@ function solve_potential(φ, rhs, μ, κ, ε, dt, dx; tol = 1e-12, maxit = 50)
 end
 
 "Initial potential from ρ by (29)."
-initial_potential(ρ, ε, dx) = solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, ε, 0.0, dx)
+initial_potential(ρ, λ, dx) = solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, λ, 0.0, dx)
 
 """
-    step(ρ, u, φ, dt, dx, ε, η, κ)
+    step(ρ, u, φ, dt, dx, λ, η, κ)
 
 One step of (27)–(29) with the given edge coefficients η and constant κ (κ = 0 gives §3.3).
 Returns `(ρ, u, φ, F)` at level n + 1, F being the mass flux used.
 """
-function step(ρ, u, φ, dt, dx, ε, η, κ)
+function step(ρ, u, φ, dt, dx, λ, η, κ)
     N = length(ρ)
     ρbar = edgemap(logmean, ρ)                      # (17)
     conv = ρbar .* avg(u)                           # ρ̄ {u}
     μ = η .* dt
     κ > 0 && (μ = μ .+ κ .* edgemap(logmean, exp.(φ)))   # μ of (52), linearised ρ̂ⁿ
-    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx), μ, κ, ε, dt, dx)
+    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx), μ, κ, λ, dt, dx)
     dφ = grad(φ1, dx)
     Q = μ .* dφ
-    κ > 0 && (Q = Q .- κ * ε^2 .* grad(lap(φ1, dx), dx))  # (46)
+    κ > 0 && (Q = Q .- κ * λ^2 .* grad(lap(φ1, dx), dx))  # (46)
     F = conv .- Q                                   # (18)
     ρ1 = ρ .- dt .* divm(F, dx)                     # (27)
     G = [F[e] >= 0 ? u[e] * F[e] : u[right(e, N)] * F[e] for e in 1:N]   # (19)

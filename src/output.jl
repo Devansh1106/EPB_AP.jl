@@ -42,7 +42,7 @@ function case_meta(case::TestCase, res::Result, t)
     m = Pair{String,Any}["case" => case.name, "scheme" => s.kind, "eta" => s.eta]
     s.kind == :dissipation &&
         append!(m, ["theta" => s.theta, "kappa" => "$(s.kappa_c)*dx*(max|u|+$(s.kappa_s))"])
-    return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "eps" => case.eps,
+    return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "lambda" => case.lambda,
         "T" => case.T, "t" => t, "steps" => res.steps, "status" => res.status,
         "timestep" => "mode=$(case.timestep.mode), cfl=$(case.timestep.cfl), dtmax=$(case.timestep.dtmax)"]]
 end
@@ -65,7 +65,7 @@ the solution at the final time, one file per snapshot, and the per-step history.
 function run_case(name::Symbol; dir = "data", kw...)
     case = testcase(name; kw...)
     res = solve(case)
-    base = joinpath(dir, "$(name)_$(case.scheme.kind)_N$(case.N)_eps$(case.eps)_T$(case.T)")
+    base = joinpath(dir, "$(name)_$(case.scheme.kind)_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
     paths = String[]
     for (t, ρ, u, φ) in res.snapshots
         meta = case_meta(case, res, t)

@@ -8,7 +8,7 @@ using EPB_AP: CASES, lap, riemann_speeds, SolitonProfile
         ρ, u = c.init(g.x)
         @test length(ρ) == length(u) == 64 && all(ρ .> 0)
     end
-    @test testcase(:smooth; eps = 1e-2, N = 50).eps == 1e-2
+    @test testcase(:smooth; lambda = 1e-2, N = 50).lambda == 1e-2
     @test_throws ArgumentError testcase(:nope)
 end
 
@@ -41,10 +41,10 @@ end
     end
 end
 
-@testset "asymptotic preservation: residual ∝ ε²" begin
+@testset "asymptotic preservation: residual ∝ λ²" begin
     for (name, kind) in [(:smooth, :shift), (:ap, :dissipation)]
-        r = [solve(testcase(name; eps, T = 0.1, scheme = Scheme(kind = kind))).history.ap_residual[end]
-             for eps in (1e-3, 1e-4, 1e-5)]
+        r = [solve(testcase(name; lambda, T = 0.1, scheme = Scheme(kind = kind))).history.ap_residual[end]
+             for lambda in (1e-3, 1e-4, 1e-5)]
         @test all(95 .< r[1:2] ./ r[2:3] .< 105)
     end
 end

@@ -1,6 +1,6 @@
 # Convergence study for one test case on a sequence of refined grids.
 #
-#   julia --project=scripts scripts/convergence.jl <case> [--scheme shift|dissipation] [--eps ε] [--T T]
+#   julia --project=scripts scripts/convergence.jl <case> [--scheme shift|dissipation] [--lambda λ] [--T T]
 #         [--N 100,200,400,800] [--dtmax c] [--var rho|u|phi|m] [--ref Nref]
 #
 # Errors are measured against the exact solution when the case has one; otherwise against a
@@ -8,7 +8,7 @@
 using EPB_AP, Printf
 
 function parse_args(args)
-    isempty(args) && error("usage: convergence.jl <case> [--scheme ..] [--eps ..] [--T ..] [--N ..] [--dtmax ..] [--var ..] [--ref ..]")
+    isempty(args) && error("usage: convergence.jl <case> [--scheme ..] [--lambda ..] [--T ..] [--N ..] [--dtmax ..] [--var ..] [--ref ..]")
     opts = Dict(args[i][3:end] => args[i+1] for i in 2:2:length(args)-1)
     return Symbol(args[1]), opts
 end
@@ -21,7 +21,7 @@ function main(args)
     name, o = parse_args(args)
     kw = Dict{Symbol,Any}()
     haskey(o, "scheme") && (kw[:scheme] = Scheme(kind = Symbol(o["scheme"])))
-    haskey(o, "eps") && (kw[:eps] = parse(Float64, o["eps"]))
+    haskey(o, "lambda") && (kw[:lambda] = parse(Float64, o["lambda"]))
     haskey(o, "T") && (kw[:T] = parse(Float64, o["T"]))
     haskey(o, "dtmax") && (kw[:timestep] = TimeStep(dtmax = parse(Float64, o["dtmax"])))
     Ns = parse.(Int, split(get(o, "N", "100,200,400,800"), ","))
@@ -38,8 +38,8 @@ function main(args)
         reference = r -> field(case.exact(r.grid.x, r.t)..., var)
         println("Reference: exact solution.")
     end
-    @printf("case = %s, scheme = %s, ε = %g, T = %g, variable = %s\n",
-            name, case.scheme.kind, case.eps, case.T, var)
+    @printf("case = %s, scheme = %s, λ = %g, T = %g, variable = %s\n",
+            name, case.scheme.kind, case.lambda, case.T, var)
     @printf("%6s  %11s %6s  %11s %6s  %11s %6s\n", "N", "L1", "order", "L2", "order", "Linf", "order")
     prev = nothing
     for N in Ns

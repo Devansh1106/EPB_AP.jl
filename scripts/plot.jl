@@ -37,7 +37,7 @@ function plot_file(path; out = replace(path, r"\.csv$" => ".png"))
         p
     end
     title = join(filter(!isempty, [get(meta, k, "") for k in ("case", "scheme")]), ", ") *
-            "  N=$(get(meta, "N", "?")), ε=$(get(meta, "eps", "?")), t=$(get(meta, "t", "?"))"
+            "  N=$(get(meta, "N", "?")), λ=$(get(meta, "lambda", "?")), t=$(get(meta, "t", "?"))"
     fig = plot(panels...; layout = length(panels), size = (450 * min(length(panels), 3),
                330 * cld(length(panels), 3)), plot_title = title, plot_titlefontsize = 10, margin = 4Plots.mm, left_margin = 10Plots.mm, bottom_margin = 8Plots.mm)
     savefig(fig, out)
