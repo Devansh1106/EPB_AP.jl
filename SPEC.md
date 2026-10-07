@@ -12,7 +12,7 @@ Source: Arun & Ghorai, *A collocated finite volume scheme for the Euler–Poisso
 ```
 
 $\lambda$ is the scale parameter (Debye length) of the Poisson equation; the manuscript writes $\varepsilon$, and the code
-keyword is `eps`. Interval $[a,b]$, $N$ uniform cells, centres $x_i = a + (i-\tfrac12)\Delta x$, all unknowns cell
+keyword is `lambda`. Interval $[a,b]$, $N$ uniform cells, centres $x_i = a + (i-\tfrac12)\Delta x$, all unknowns cell
 centred (6). All problems are periodic except the Riemann problem (walls, §7).
 
 ## 2. Discrete framework (§2)
@@ -73,12 +73,9 @@ Q_e = \mu_e (\partial_E \phi^{n+1})_e - \kappa \lambda^2 (\partial_E \Delta_M \p
 ```math
 A_i = \sum_e c^+_{i,e}, \qquad C_i = \Delta x \sum_e \eta_e \lvert(\partial_E\phi^n)_e\rvert, \qquad
 X_i = \frac{2\theta\rho_i}{A_i + \sqrt{A_i^2 + 4\theta C_i \rho_i}}, \qquad
-\Delta t = \min\Big(0.9 \min_i X_i \Delta x,\ \frac{0.9\Delta x}{\max\lvert u^n\rvert + 1}\Big).
+\Delta t = 0.9 \min_i X_i \Delta x .
 ```
-  The first bound is Remark 3.22 (with the factor 0.9). The second is not in Remark 3.22: §5.6 imposes it on all its runs
-  ("$\Delta t$ from Remark 3.22, subject to $\Delta t \le 0.9\Delta x/(\max_i\lvert u^n_i\rvert + 1)$"). It is the acoustic
-  CFL for the wave speeds $u \pm 1$ (sound speed 1), which Remark 3.22 does not see, and it gives
-  $\max\lvert u\rvert\Delta t/\Delta x \le 1$, the condition under which $\kappa^n$ satisfies (53) (Remark 3.23).
+  No other bound on $\Delta t$ (see §9 item 10).
   A posteriori (CFLθ): $b_i = \frac{\Delta t}{\Delta x} \sum_e F^+_{i,e} \le \theta \rho^n_i$; retry as in §4.
 
 ## 6. Implicit solve (Remark 3.22), both schemes
@@ -102,6 +99,9 @@ $u^{n+1} = (\rho u)^{n+1}/\rho^{n+1}$. $\phi^0$ from $\rho^0$ by (29) (same solv
 
 ## 7. Test cases ($\phi^0$ from (29))
 
+The parameters of each case (domain, boundary, $N$, $\lambda$, $T$, scheme, time step, $n_r$, $c$) are read from
+`params/<case>.toml`, not from the source; the table gives their values.
+
 Periodic, except the Riemann problem, which uses the boundary conditions of [1, §7.4] at both ends: extrapolation for
 $\rho$, no-slip for $u$, homogeneous Neumann for $\phi$. Discretely, the two boundary edges carry $F = G = 0$ and
 $(\partial_E\phi) = 0$ (so also $Q = 0$ and no source contribution there); with $u = 0$ at the wall the extrapolated
@@ -119,10 +119,10 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 | soliton (§5.6) | $[0,40]$ | travelling wave $c=1.3$, peak at $x=20$ | 1 | order 2; robustness $L/c$ | 400; order 100…1600 | rule, $\le 0.4\Delta x$ (order) | exact (translation) |
 | ap (§5.6) | $[0,1]$ | $1+0.2\sin 2\pi x$, $0.2\cos 2\pi x$ | 1 … 1e-6 | 0.2 | 200 | fixed $0.25\Delta x$ | $\lVert e^\phi-\rho\rVert_\infty \propto \lambda^2$ |
 | simple wave (§5.6) | $[0,1]$ | $e^{u^0}$, $0.2\sin 2\pi x$ | 1e-4 | 0.3 | 100…1600 | rule, $\le 0.4\Delta x$ | exact (characteristics) |
-| riemann ([1, §7.4]) | $[-80,100]$, walls | 1 for $x<0$, $n_r$ for $x \ge 0$; $u=0$; $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$ | 1e-4 | 50 | 9000 | (44) | ICE solution [1, (7.8)–(7.10)] |
-| riemann shock speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
+| riemann ([1, §7.4]) | $[-80,100]$, walls | 1 for $x<0$, $n_r$ for $x \ge 0$; $u=0$; $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$ | 1e-4 | 50 | 400 (9000 in [1]) | (44) | ICE solution [1, (7.8)–(7.10)] |
+| riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
 
-* Data files: `data/<case>_<scheme>_N<N>_eps<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
+* Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
 * Soliton: $u = c - \sqrt{c^2-2\phi}$, $\rho = c/\sqrt{c^2-2\phi}$, $\lambda^2(\phi')^2 = 2V(\phi)$,
   $V = e^\phi - 1 + c\big(\sqrt{c^2-2\phi} - c\big)$; $\phi_{max}$ from $V(\phi_{max}) = 0$. Computed by integrating
@@ -130,7 +130,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
   the exact solution at $t$ is the profile at $\xi = x - 20 - ct$ (periodic).
 * Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
-  Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, 60]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
+  Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,
   shock-like ($1, 0.4 \mid 0.3, -0.4$ at $x = \tfrac12$), random rough ($\rho = 0.5+r$, $u = 2s-1$, `Random.seed!(20260923)`).
 
@@ -148,7 +148,8 @@ $\lambda$; observed order ≈ 1.
    printed form reproduces the §5.2 tables to all digits, so those step counts and energy changes differ here;
    all properties (positivity, energy decrease, AP, order) hold with either form.
 2. Soliton robustness $T$ is missing: **$T = L/c = 40/1.3$** (one domain traversal, Degond et al. $t_L$, as instructed).
-3. Riemann: **all data from [1, §7.4]** to reproduce [1, Fig. 8]: domain $[-80,100]$, 9000 cells, $\lambda = 10^{-4}$,
+3. Riemann: **all data from [1, §7.4]** to reproduce [1, Fig. 8]: domain $[-80,100]$, 9000 cells (default 400 for
+   quick runs; set `N` in `params/riemann.toml`), $\lambda = 10^{-4}$,
    $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$, $T = 50$, the boundary conditions of [1] (§7), log mean only, scheme A.
    The manuscript's §5.5 shock-speed study ($n_r = 0.5$, $N$ = 2000–8000, $t$ = 4, 8) uses the same problem with the same
    walls. Shock positions at $T = 50$: 58.9, 53.6, 50.6 for $n_r$ = 0.5, 0.75, 0.95.
@@ -167,3 +168,6 @@ $\lambda$; observed order ≈ 1.
 9. Errors: discrete norms $\Delta x\sum_i\lvert e_i\rvert$ ($L^1$), $(\Delta x\sum_i e_i^2)^{1/2}$ ($L^2$),
    $\max_i\lvert e_i\rvert$ ($L^\infty$) at cell centres; fine-grid references are restricted by averaging blocks of
    $N_{ref}/N$ cells.
+10. §5.6 caps the Remark 3.22 step by $\Delta t \le 0.9\Delta x/(\max_i\lvert u^n_i\rvert + 1)$. **Not used** (author's
+    decision): both schemes take $\Delta t$ from their $X$ bound only. Remark 3.23 needs $\max\lvert u\rvert\Delta t/\Delta x \le 1$
+    for $\kappa^n$ to satisfy (53); it is $\le 0.45$ in all runs of §7.
