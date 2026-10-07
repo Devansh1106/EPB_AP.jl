@@ -92,10 +92,10 @@ function riemann_exact(x, t; nr = 0.5)
     return ρ, last.(ρu), log.(ρ)
 end
 
-"Shock position by equal areas over the cells with centres in [½(u_m - 1 + u_s)t, xb] (§5.5)."
-function shock_position(x, ρ, t, dx; nr = 0.5, xb = 60.0)
+"Shock position by equal areas over the cells with centres in [½(u_m - 1 + u_s)t, b] (§5.5)."
+function shock_position(x, ρ, t, dx; nr = 0.5)
     um, us = riemann_speeds(nr)
     xa = (um - 1 + us) * t / 2
-    idx = findall(xi -> xa <= xi <= xb, x)
+    idx = findall(>=(xa), x)
     return x[first(idx)] - dx / 2 + dx * sum(ρ[idx] .- nr) / (exp(-um) - nr)
 end

@@ -42,7 +42,7 @@ function case_meta(case::TestCase, res::Result, t)
     m = Pair{String,Any}["case" => case.name, "scheme" => s.kind, "eta" => s.eta]
     s.kind == :dissipation &&
         append!(m, ["theta" => s.theta, "kappa" => "$(s.kappa_c)*dx*(max|u|+$(s.kappa_s))"])
-    return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "lambda" => case.lambda,
+    return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "bc" => case.bc, "lambda" => case.lambda,
         "T" => case.T, "t" => t, "steps" => res.steps, "status" => res.status,
         "timestep" => "mode=$(case.timestep.mode), cfl=$(case.timestep.cfl), dtmax=$(case.timestep.dtmax)"]]
 end

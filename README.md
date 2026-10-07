@@ -20,11 +20,11 @@ using EPB_AP
 run_case(:step)                                      # writes data/step_dissipation_N200_lambda0.1_T1.0*.csv
 run_case(:smooth; lambda = 1e-2, scheme = Scheme())  # override any default
 ```
-Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann`.
+Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed`.
 
 ## Parameters
 
-Each case reads its parameters (domain, N, λ, T, scheme, time step) from `params/<case>.toml`.
+Each case reads its parameters (domain, boundary, N, λ, T, scheme, time step) from `params/<case>.toml`.
 Edit that file, or copy it and run the copy: `run_case("my_step.toml")`. Keywords override the file.
 
 ## Plot

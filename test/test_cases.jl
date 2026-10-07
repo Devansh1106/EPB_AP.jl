@@ -3,7 +3,7 @@ using EPB_AP: CASES, lap, riemann_speeds, SolitonProfile
 @testset "test case definitions" begin
     for name in CASES
         c = testcase(name)
-        @test c.name == name
+        @test c.name == (name == :riemann_speed ? :riemann : name)
         g = Grid(c.domain..., 64)
         ρ, u = c.init(g.x)
         @test length(ρ) == length(u) == 64 && all(ρ .> 0)
@@ -57,12 +57,26 @@ end
     end
 end
 
+@testset "Riemann problem with walls [1, §7.4]: shock position and middle state" begin
+    c = testcase(:riemann)
+    @test c.bc == :wall && c.N == 400 && c.T == 50
+    r = solve(c)
+    h = r.history
+    @test r.status == :completed && abs(r.u[1]) < 1e-3 && abs(r.u[end]) < 1e-3   # only tails reach the walls
+    @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]
+    @test all(diff(h.energy) .<= 1e3 * eps() * max(1, abs(h.energy[1])))
+    d = Dict(c.diagnostics(c, r))
+    @test d["shock_position_exact"] ≈ 58.89 atol = 0.01               # [1]: 58.9
+    @test abs(d["shock_position"] - d["shock_position_exact"]) < 0.5   # Δx = 0.45
+    @test r.u[argmin(abs.(r.grid.x))] ≈ riemann_speeds(0.5)[1] atol = 1e-3
+end
+
 @testset "CSV output" begin
     dir = mktempdir()
     r, paths = run_case(:riemann; dir, N = 400, T = 2.0, snapshots = [1.0])
     @test length(paths) == 3 && all(isfile, paths)
     meta, names, data = read_csv(paths[2])
-    @test meta["case"] == "riemann" && meta["N"] == "400" && meta["T"] == "2.0"
+    @test meta["case"] == "riemann" && meta["N"] == "400" && meta["T"] == "2.0" && meta["bc"] == "wall"
     @test haskey(meta, "shock_speed")
     @test names == ["x", "rho", "u", "phi", "rho_exact", "u_exact", "phi_exact"]
     @test data[:, 2] == r.rho

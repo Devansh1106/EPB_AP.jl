@@ -16,6 +16,21 @@ using EPB_AP: Grid, grad, divm, lap, logmean, harmonic, energy
     @test log2(err(50) / err(100)) ≈ 2 atol = 0.05
 end
 
+@testset "operators with walls" begin
+    g = Grid(0, 1, 37; bc = :wall)
+    @test g.bc == :wall && g.x == Grid(0, 1, 37).x
+    @test_throws ArgumentError Grid(0, 1, 37; bc = :open)
+    dx, p, q, v = g.dx, rand(37), rand(37), [rand(36); 0.0]   # no flux through the walls
+    @test grad(q, dx; wall = true)[end] == 0
+    @test dx * sum(q .* divm(v, dx)) + dx * sum(grad(q, dx; wall = true) .* v) ≈ 0 atol = 1e-12
+    @test dx * sum(p .* lap(q, dx; wall = true)) ≈ dx * sum(lap(p, dx; wall = true) .* q)
+    @test sum(lap(q, dx; wall = true)) ≈ 0 atol = 1e-10                 # Neumann: no net flux
+    # (iv) second-order consistency at interior cells of a function with zero slope at the walls
+    err(N) = (h = Grid(0, 1, N); l = lap(cospi.(h.x), h.dx; wall = true) .+ π^2 .* cospi.(h.x);
+              maximum(abs, l[2:end-1]))
+    @test log2(err(50) / err(100)) ≈ 2 atol = 0.05
+end
+
 @testset "interface means" begin
     @test logmean(1.0, 2.0) ≈ 1 / log(2) rtol = 1e-15
     @test logmean(0.3, 0.3 + 1e-9) ≈ 0.3 + 5e-10 rtol = 1e-15

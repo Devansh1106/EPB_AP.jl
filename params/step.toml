@@ -1,6 +1,7 @@
 # Parameters of the test case `step`: density step (§5.6). See SPEC §7.
 case = "step"        # initial data (and exact solution) of this case
 domain = [0.0, 1.0]  # [a, b]
+bc = "periodic"       # "periodic" or "wall"
 N = 200              # number of cells
 lambda = 0.1         # scale parameter λ of the Poisson equation
 T = 1.0              # final time

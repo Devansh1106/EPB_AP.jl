@@ -1,11 +1,11 @@
-# Parameters of the test case `riemann`: Riemann problem of [1, §7.4] (Fig. 8). See SPEC §7.
+# Parameters of the test case `riemann_speed`: shock speed of the Riemann problem (§5.5). See SPEC §7.
 case = "riemann"     # initial data (and exact solution) of this case
 domain = [-80.0, 100.0]  # [a, b]
 bc = "wall"          # walls of [1]: extrapolated ρ, no-slip u, Neumann φ
-N = 400              # number of cells; [1] uses 9000
+N = 2000             # number of cells; §5.5 uses 2000, 4000, 8000
 lambda = 1e-4        # scale parameter λ of the Poisson equation
-T = 50.0             # final time
-snapshots = []       # extra output times in (0, T)
+T = 8.0              # final time
+snapshots = [4.0]    # speed = (x_s(T) - x_s(4))/(T - 4)
 
 [scheme]
 kind = "shift"       # "shift" (§3.3) or "dissipation" (§3.4)
@@ -17,4 +17,4 @@ cfl = 0.25           # used only when mode = "fixed"
 dtmax = inf          # upper bound on Δt/Δx
 
 [init]
-nr = 0.5             # right density n_r (ρ = 1 for x < 0); [1] uses 0.5, 0.75, 0.95
+nr = 0.5             # right density n_r (ρ = 1 for x < 0)

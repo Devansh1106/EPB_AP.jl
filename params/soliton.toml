@@ -1,6 +1,7 @@
 # Parameters of the test case `soliton`: ion-acoustic soliton (§5.6). See SPEC §7.
 case = "soliton"     # initial data (and exact solution) of this case
 domain = [0.0, 40.0] # [a, b]
+bc = "periodic"       # "periodic" or "wall"
 N = 400              # number of cells
 lambda = 1.0         # scale parameter λ of the Poisson equation
 T = 30.76923076923077  # final time (L/c)

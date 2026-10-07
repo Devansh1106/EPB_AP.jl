@@ -30,15 +30,16 @@ ap_residual(ρ, φ) = maximum(abs, exp.(φ) .- ρ)
 """
     solve(ρ0, u0, grid, λ, T; scheme = Scheme(), timestep = TimeStep(), snapshots = Float64[])
 
-Integrate the first-order scheme from (ρ0, u0) to time T; φ⁰ is computed from ρ0 by (29).
+Integrate the first-order scheme from (ρ0, u0) to time T on `grid` (periodic or walls);
+φ⁰ is computed from ρ0 by (29).
 `status` is `:completed` or `:collapse`.
 """
 function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeStep(),
                snapshots = Float64[], maxretry = 100)
-    dx = grid.dx
+    dx, wall = grid.dx, grid.bc == :wall
     ρ, u = float.(copy(ρ0)), float.(copy(u0))
-    φ = initial_potential(ρ, λ, dx)
-    hist = (t = [0.0], dt = [NaN], energy = [energy(ρ, u, φ, λ, dx)], min_rho = [minimum(ρ)],
+    φ = initial_potential(ρ, λ, dx; wall)
+    hist = (t = [0.0], dt = [NaN], energy = [energy(ρ, u, φ, λ, dx; wall)], min_rho = [minimum(ρ)],
             mass = [dx * sum(ρ)], ap_residual = [ap_residual(ρ, φ)], cfl_ratio = [NaN])
     stops = sort(unique([filter(s -> 0 < s < T, snapshots); T]))
     snaps = Any[]
@@ -47,7 +48,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         target = first(filter(s -> s > t, stops))
         η = eta_coefficient(ρ, scheme)
         κ = kappa_coefficient(u, dx, scheme)
-        dt = timestep.mode == :fixed ? timestep.cfl * dx : stable_dt(ρ, u, φ, dx, η, κ, scheme)
+        dt = timestep.mode == :fixed ? timestep.cfl * dx : stable_dt(ρ, u, φ, dx, η, κ, scheme; wall)
         dt = min(dt, timestep.dtmax * dx)
         if timestep.mode == :cfl && dt < 1e-4 * dx
             status = :collapse
@@ -57,7 +58,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         local ρ1, u1, φ1, r
         retried = false
         for _ in 1:maxretry
-            ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, η, κ)
+            ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, η, κ; wall)
             r = cfl_ratio(ρ, F, dt, dx, scheme)
             (timestep.mode == :fixed || r <= 1) && break
             dt /= r
@@ -70,7 +71,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         ρ, u, φ = ρ1, u1, φ1
         t = dt == target - t ? target : t + dt
         n += 1
-        push!(hist.t, t); push!(hist.dt, dt); push!(hist.energy, energy(ρ, u, φ, λ, dx))
+        push!(hist.t, t); push!(hist.dt, dt); push!(hist.energy, energy(ρ, u, φ, λ, dx; wall))
         push!(hist.min_rho, minimum(ρ)); push!(hist.mass, dx * sum(ρ))
         push!(hist.ap_residual, ap_residual(ρ, φ)); push!(hist.cfl_ratio, r)
         t == target && target < T && push!(snaps, (t, copy(ρ), copy(u), copy(φ)))
