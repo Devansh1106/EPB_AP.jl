@@ -43,9 +43,8 @@ Step (27)–(29):
 -\lambda^2 \Delta_M \phi^{n+1} + e^{\phi^{n+1}} = \rho^{n+1},
 ```
 with $F, G$ built from $\bar\rho^n, u^n$ and $Q_e = \eta_e \Delta t (\partial_E \phi^{n+1})_e$; $S$ from $\bar\rho^n, \phi^{n+1}$.
-* $\eta_e = \tfrac54 (\bar\rho^n_e)^2/\rho^{n,h}_e$ (43). This **local** edge coefficient is the default (`eta = :local`) for both schemes; it is
-  never slower than the global one (§5.2: 59 vs 2489 steps near vacuum at $\lambda = 1$, 1511 vs 14906 at $\lambda = 10^{-2}$).
-  Option `eta = :global` (used only for that comparison): $\max_e$ of (43) at every edge.
+* $\eta_e = \tfrac54 (\bar\rho^n_e)^2/\rho^{n,h}_e$ (43), edge by edge (local) in both schemes. The global variant of §5.2
+  ($\max_e$ of (43) at every edge) is not implemented.
 * Time step (44), with $X = \Delta t/\Delta x$ and the minimum over $i$:
 ```math
 X \le \frac{\tfrac25 \rho_i}{A_i + \sqrt{A_i^2 + \tfrac45 C_i \rho_i}}, \qquad
@@ -112,7 +111,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 |---|---|---|---|---|---|---|---|
 | smooth (§5.2) | $[0,1]$ | $1+0.3\sin 2\pi x$, $0.2\cos 2\pi x$ | 1, 1e-2, 1e-4 | 0.5 (AP: 0.3; order: 0.2) | 200; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
 | steep (§5.2) | $[0,1]$ | $1+0.8\sin^3 2\pi x$, $0.25\cos 2\pi x$ | 1, 1e-3 | 0.5 | 200 | (44) | none |
-| near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 (η local/global: 1, 1e-2) | 0.5 (η study 0.3) | 200 | (44) | none |
+| near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
 | step (§5.6) | $[0,1]$ | 1 on $(\tfrac14,\tfrac34)$, $\tfrac12$ else; 0 | 0.1 | 1 | 200, 800, 3200 | scheme rule | $\min\rho$ stays $\tfrac12$ |
 | expansion (§5.6) | $[0,1]$ | 1, $\sin 2\pi x$ | 1, 0.1 | 0.6 | 200 (400, 1600 at $\lambda=0.1$) | scheme rule | $\rho(0,T) \to 1/(1+2\pi T)$ |

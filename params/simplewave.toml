@@ -9,7 +9,6 @@ snapshots = []       # extra output times in (0, T)
 
 [scheme]
 kind = "dissipation" # "shift" (§3.3) or "dissipation" (§3.4)
-eta = "local"        # "local" or "global" edge coefficient η
 theta = 0.5          # θ of Corollary 3.17
 kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
 kappa_s = 0.0
