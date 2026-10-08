@@ -13,6 +13,11 @@ Base.@kwdef struct Scheme
     theta::Float64 = 0.5
     kappa_c::Float64 = 0.5
     kappa_s::Float64 = 0.0
+    function Scheme(kind, theta, kappa_c, kappa_s)
+        kind in (:shift, :dissipation) ||
+            throw(ArgumentError("unknown scheme kind :$kind; use :shift or :dissipation"))
+        return new(kind, theta, kappa_c, kappa_s)
+    end
 end
 
 "Local edge coefficient η_e: (43) for `:shift`, Corollary 3.17(i) for `:dissipation`."

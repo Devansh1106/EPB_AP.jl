@@ -86,3 +86,8 @@ end
         @test cfl_ratio(ρ, F, dt, g.dx, sch) <= 1.05
     end
 end
+
+@testset "scheme kind is checked" begin
+    @test Scheme(kind = :dissipation).kind == :dissipation
+    @test_throws ArgumentError Scheme(kind = :dissipative)
+end
