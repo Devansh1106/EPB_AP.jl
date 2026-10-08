@@ -55,3 +55,34 @@ end
 @testset "SecondOrder options are checked" begin
     @test_throws ArgumentError SecondOrder(limiter = :vanleer)
 end
+
+@testset "fully discrete second order (§5.4 state, Δt = 0.4Δx)" begin
+    run(N, λ, limiter) = solve(1 .+ 0.3sinpi.(2Grid(0, 1, N).x), 0.2cospi.(2Grid(0, 1, N).x), Grid(0, 1, N), λ, 0.2;
+                               scheme = SecondOrder(; limiter), timestep = TimeStep(mode = :fixed, cfl = 0.4))
+    restrict(v, N) = vec(sum(reshape(v, length(v) ÷ N, N); dims = 1)) ./ (length(v) ÷ N)
+    # λ = 1 needs unlimited slopes: minmod clips the steep peak at x = 1/4 (Remark 4.10, order ≈ 1.5)
+    for (λ, limiter) in ((1.0, :none), (1e-4, :minmod))
+        ref = run(1600, λ, limiter)
+        errs = map((50, 100, 200)) do N
+            r = run(N, λ, limiter)
+            @test r.status == :completed
+            [sum(abs, f(r) .- restrict(f(ref), N)) / N for f in (r -> r.rho, r -> r.rho .* r.u, r -> r.phi)]
+        end
+        p = [log2.(errs[k] ./ errs[k + 1]) for k in 1:2]
+        @test all(p[2] .> 1.8)
+    end
+end
+
+@testset "second-order runs: mass, positivity, time-step rule" begin
+    g = Grid(0, 1, 100)
+    r = solve(1 .+ 0.3sinpi.(2g.x), 0.2cospi.(2g.x), g, 1.0, 0.3; scheme = SecondOrder())
+    h = r.history
+    @test r.status == :completed
+    @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]
+    @test all(h.min_rho .> 0)
+    ρ, u = 1 .+ 0.3sinpi.(2g.x), 0.2cospi.(2g.x)
+    @test 0 < EPB_AP.stable_dt(ρ, u, EPB_AP.initial_potential(ρ, 1.0, g.dx), g.dx, SecondOrder()) <= 0.4g.dx / 0.2   # (91)
+    w = Grid(0, 1, 100; bc = :wall)
+    r = solve(ifelse.(w.x .< 0.5, 1.0, 0.5), zero(w.x), w, 1e-2, 0.2; scheme = SecondOrder())
+    @test r.status == :completed && abs(r.history.mass[end] - r.history.mass[1]) < 1e-13
+end

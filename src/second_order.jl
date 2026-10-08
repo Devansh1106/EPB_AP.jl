@@ -76,3 +76,65 @@ function semidiscrete_rhs(ρ, q, φ, dx, sch::SecondOrder; wall = false)
     S = source(f.ρbar, grad(φ, dx; wall))
     return -divm(F, dx), -divm(upwind_flux(F, f), dx) .+ S, F, f
 end
+
+# ARS(2,2,2) pair (73)–(74).
+const GAMMA = 1 - 1 / sqrt(2)
+const DELTA = 1 - 1 / (2GAMMA)
+
+"Stage mass flux (60) with the semi-implicit part (59): `F = E - γΔt ρ̄ ∂E φ - D`."
+stage_flux(f, φ, dt, dx; wall = false) = f.E .- GAMMA * dt .* f.ρbar .* grad(φ, dx; wall) .- f.D
+
+"Elliptic solve (88), `e^φ - λ² ΔM φ - γ²Δt² divM(ρ̄ ∂E φ) = ρ̂`, by the Newton solver of §6 from `φ`."
+stage_potential(φ, ρhat, f, dt, λ, dx; wall = false) =
+    solve_potential(φ, ρhat, GAMMA^2 * dt .* f.ρbar, 0.0, λ, dt, dx; wall)
+
+"""
+    step(ρ, u, φ, dt, dx, λ, sch::SecondOrder; wall = false)
+
+One step of the stage sequence (76)–(87) (SPEC §10). Returns `(ρ, u, φ)` at level n + 1; throws
+`NonPositiveDensity` if a stage or reconstructed density is not positive.
+"""
+function step(ρ, u, φ, dt, dx, λ, sch::SecondOrder; wall = false)
+    γ, δ = GAMMA, DELTA
+    q = ρ .* u
+    div(F) = divm(F, dx)
+    # Stage 1 at (ρⁿ, qⁿ, φⁿ).
+    f1 = faces(ρ, q, dx, sch; wall)
+    F1 = f1.E .- f1.D
+    C1 = div(upwind_flux(F1, f1))
+    S1 = source(f1.ρbar, grad(φ, dx; wall))
+    # Stage 2.
+    ρE2 = ρ .- γ * dt .* div(F1)                                        # (76)
+    qt2 = q .- γ * dt .* C1                                             # (77) force-free
+    qE2 = qt2 .+ γ * dt .* S1                                           # (78) force-carrying
+    f2 = faces(ρE2, qt2, dx, sch; wall)
+    φ2 = stage_potential(φ, ρ .- γ * dt .* div(f2.E .- f2.D), f2, dt, λ, dx; wall)   # (79)
+    F2 = stage_flux(f2, φ2, dt, dx; wall)                               # (80)
+    S2 = source(f2.ρbar, grad(φ2, dx; wall))
+    # Stage 3.
+    C2 = div(upwind_flux(F2, faces(ρE2, qE2, dx, sch; wall)))           # (81)
+    ρE3 = ρ .- dt .* div(δ .* F1 .+ (1 - δ) .* F2)                      # (82)
+    qh3 = q .- dt .* (δ .* C1 .+ (1 - δ) .* C2) .+ (1 - γ) * dt .* S2    # (83)
+    f3 = faces(ρE3, qh3, dx, sch; wall)                                 # (84)
+    φ3 = stage_potential(φ2, ρ .- dt .* div((1 - γ) .* F2 .+ γ .* (f3.E .- f3.D)), f3, dt, λ, dx; wall)  # (85)
+    F3 = stage_flux(f3, φ3, dt, dx; wall)
+    ρ1 = ρ .- dt .* div((1 - γ) .* F2 .+ γ .* F3)                       # (86)
+    minimum(ρ1) > 0 || throw(NonPositiveDensity())
+    q1 = qh3 .+ γ * dt .* source(f3.ρbar, grad(φ3, dx; wall))           # (87)
+    return ρ1, q1 ./ ρ1, φ3
+end
+
+"""
+    stable_dt(ρ, u, φ, dx, sch::SecondOrder; wall = false)
+
+Time step of §4.11: the minimum of (44) and (91), both with η of (43), `cfl = sch.cfl` in (91).
+"""
+function stable_dt(ρ, u, φ, dx, sch::SecondOrder; wall = false)
+    η = eta_coefficient(ρ, Scheme())
+    dt44 = stable_dt(ρ, u, φ, dx, η, 0.0, Scheme(); wall)
+    wall && (η[end] = 0)
+    jump = abs.(grad(φ, dx; wall))                      # |φ_{i+1} - φ_i| / Δx
+    N = length(ρ)
+    s = maximum(abs(u[i]) + max(η[i], η[left(i, N)]) * max(jump[i], jump[left(i, N)]) for i in 1:N)
+    return s > 0 ? min(dt44, sch.cfl * dx / s) : dt44
+end

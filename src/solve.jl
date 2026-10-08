@@ -1,9 +1,11 @@
 """
     TimeStep(; mode = :cfl, cfl = 0.25, dtmax = Inf)
 
-* `mode = :cfl`: Δt from the scheme's rule ([`stable_dt`](@ref)), checked a posteriori with the computed
-  flux; a violating step is repeated with Δt divided by the measured ratio. Δt < 10⁻⁴Δx is a collapse.
-* `mode = :fixed`: Δt = `cfl`·Δx, no check (§5.6, AP study).
+* `mode = :cfl`: Δt from the scheme's rule ([`stable_dt`](@ref)), checked a posteriori: first order with
+  the computed flux, a violating step being repeated with Δt divided by the measured ratio; second order
+  for positive densities, a failing step being repeated with Δt/2. Δt < 10⁻⁴Δx is a collapse.
+* `mode = :fixed`: Δt = `cfl`·Δx, no check (§5.6, AP study); a second-order step with a non-positive
+  density is a collapse.
 * `dtmax`: upper bound on Δt/Δx (e.g. 0.4 in the order studies).
 """
 Base.@kwdef struct TimeStep
@@ -27,10 +29,32 @@ end
 
 ap_residual(ρ, φ) = maximum(abs, exp.(φ) .- ρ)
 
+# Scheme-specific parts of a step: the time-step rule, and one attempt returning `(ρ, u, φ, r)` where
+# r > 1 asks for a repeat with Δt/r ((CFL)/(CFLθ) ratio for first order, 2 after a non-positive density
+# for second order).
+rule_dt(ρ, u, φ, dx, s::Scheme; wall) =
+    stable_dt(ρ, u, φ, dx, eta_coefficient(ρ, s), kappa_coefficient(u, dx, s), s; wall)
+rule_dt(ρ, u, φ, dx, s::SecondOrder; wall) = stable_dt(ρ, u, φ, dx, s; wall)
+
+function attempt(ρ, u, φ, dt, dx, λ, s::Scheme; wall)
+    ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, eta_coefficient(ρ, s), kappa_coefficient(u, dx, s); wall)
+    return ρ1, u1, φ1, cfl_ratio(ρ, F, dt, dx, s)
+end
+
+function attempt(ρ, u, φ, dt, dx, λ, s::SecondOrder; wall)
+    try
+        return step(ρ, u, φ, dt, dx, λ, s; wall)..., 1.0
+    catch e
+        e isa NonPositiveDensity || rethrow()
+        return ρ, u, φ, 2.0
+    end
+end
+
 """
     solve(ρ0, u0, grid, λ, T; scheme = Scheme(), timestep = TimeStep(), snapshots = Float64[])
 
-Integrate the first-order scheme from (ρ0, u0) to time T on `grid` (periodic or walls);
+Integrate the scheme (`Scheme()` first order, `SecondOrder()` second order) from (ρ0, u0) to time T
+on `grid` (periodic or walls);
 φ⁰ is computed from ρ0 by (29).
 `status` is `:completed` or `:collapse`.
 """
@@ -46,9 +70,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
     t, n, status = 0.0, 0, :completed
     while t < T
         target = first(filter(s -> s > t, stops))
-        η = eta_coefficient(ρ, scheme)
-        κ = kappa_coefficient(u, dx, scheme)
-        dt = timestep.mode == :fixed ? timestep.cfl * dx : stable_dt(ρ, u, φ, dx, η, κ, scheme; wall)
+        dt = timestep.mode == :fixed ? timestep.cfl * dx : rule_dt(ρ, u, φ, dx, scheme; wall)
         dt = min(dt, timestep.dtmax * dx)
         if timestep.mode == :cfl && dt < 1e-4 * dx
             status = :collapse
@@ -58,13 +80,13 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         local ρ1, u1, φ1, r
         retried = false
         for _ in 1:maxretry
-            ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, η, κ; wall)
-            r = cfl_ratio(ρ, F, dt, dx, scheme)
+            ρ1, u1, φ1, r = attempt(ρ, u, φ, dt, dx, λ, scheme; wall)
             (timestep.mode == :fixed || r <= 1) && break
             dt /= r
             retried = true
         end
-        if timestep.mode == :cfl && (r > 1 || (retried && dt < 1e-4 * dx))
+        failed = r > 1 && (timestep.mode == :cfl || scheme isa SecondOrder)   # fixed first order: no check
+        if failed || (timestep.mode == :cfl && retried && dt < 1e-4 * dx)
             status = :collapse
             break
         end
