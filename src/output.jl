@@ -62,12 +62,13 @@ function solution_columns(case, grid, t, ρ, u, φ)
 end
 
 """
-    run_case(name_or_file; dir = "data", kwargs...) -> (result, paths)
+    run_case(name_or_file; dir = "data", kwargs...) -> paths
 
 Solve a test case, given by name (`params/<name>.toml`) or by parameter file, with keywords as in
 [`testcase`](@ref), and write CSV files to `dir`:
 the solution at the final time and one file per snapshot (each with the initial data and, if known,
-the exact solution), and the per-step history.
+the exact solution), and the per-step history. Returns the file paths; `solve(testcase(...))` gives the
+[`Result`](@ref) itself.
 """
 function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     case = testcase(src; kw...)
@@ -83,5 +84,5 @@ function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
                            solution_columns(case, res.grid, res.t, res.rho, res.u, res.phi)...))
     h = res.history
     push!(paths, write_csv("$(base)_history.csv", meta, collect(String.(keys(h))), collect(values(h))))
-    return res, paths
+    return paths
 end
