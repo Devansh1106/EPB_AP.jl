@@ -1,0 +1,20 @@
+# Parameters of the test case `riemann`: Riemann problem of [1, §7.4] (Fig. 8). See SPEC §7.
+case = "riemann"     # initial data (and exact solution) of this case
+domain = [-80.0, 100.0]  # [a, b]
+bc = "wall"          # walls of [1]: extrapolated ρ, no-slip u, Neumann φ
+N = 400              # number of cells; [1] uses 9000
+lambda = 1e-4        # scale parameter λ of the Poisson equation
+T = 50.0             # final time
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "shift"       # "shift" (§3.3) or "dissipation" (§3.4)
+eta = "local"        # "local" or "global" edge coefficient η
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = inf          # upper bound on Δt/Δx
+
+[init]
+nr = 0.5             # right density n_r (ρ = 1 for x < 0); [1] uses 0.5, 0.75, 0.95
