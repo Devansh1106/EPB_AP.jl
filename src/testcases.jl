@@ -13,7 +13,7 @@ Base.@kwdef struct TestCase
     lambda::Float64
     T::Float64
     N::Int
-    scheme::Scheme = Scheme()
+    scheme::Union{Scheme,SecondOrder} = Scheme()
     timestep::TimeStep = TimeStep()
     exact::Union{Nothing,Function} = nothing
     snapshots::Vector{Float64} = Float64[]
@@ -51,6 +51,17 @@ end
 symbols(d) = (; (Symbol(k) => (v isa String ? Symbol(v) : v) for (k, v) in d)...)
 
 """
+    scheme_from(d)
+
+Scheme from the `[scheme]` table of a parameter file (or any `Dict`): `kind = "second"` gives
+[`SecondOrder`](@ref), `"shift"` or `"dissipation"` a first-order [`Scheme`](@ref); the other keys are passed on.
+"""
+function scheme_from(d)
+    get(d, "kind", "shift") == "second" || return Scheme(; symbols(d)...)
+    return SecondOrder(; symbols(filter(p -> p.first != "kind", d))...)
+end
+
+"""
     testcase(name::Symbol; kwargs...)
     testcase(file::AbstractString; kwargs...)
 
@@ -67,7 +78,7 @@ function testcase(file::AbstractString; kw...)
     name, domain = Symbol(p["case"]), Tuple(float.(p["domain"]))
     λ = get(kw, :lambda, p["lambda"])
     return TestCase(; name, domain, bc = Symbol(get(p, "bc", "periodic")), lambda = λ, T = p["T"], N = p["N"],
-                    snapshots = float.(p["snapshots"]), scheme = Scheme(; symbols(p["scheme"])...),
+                    snapshots = float.(p["snapshots"]), scheme = scheme_from(p["scheme"]),
                     timestep = TimeStep(; symbols(p["timestep"])...),
                     problem(name, domain, λ, get(p, "init", Dict()))..., kw...)
 end

@@ -86,3 +86,37 @@ end
     meta, names, data = read_csv(paths[3])
     @test names[1:3] == ["t", "dt", "energy"] && size(data, 1) == r.steps + 1
 end
+
+@testset "second order on every case: mass, positivity, AP, order" begin
+    for name in EPB_AP.CASES
+        c = testcase(name; scheme = SecondOrder())
+        r = solve(testcase(name; scheme = SecondOrder(), T = min(c.T, 0.1 * (c.domain[2] - c.domain[1]))))
+        h = r.history
+        @test r.status == :completed
+        @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]
+        @test all(h.min_rho .> 0)
+    end
+    r = [solve(testcase(:ap; lambda, T = 0.1, scheme = SecondOrder())).history.ap_residual[end]
+         for lambda in (1e-3, 1e-4, 1e-5)]
+    @test all(95 .< r[1:2] ./ r[2:3] .< 105)
+    errs = map((100, 200, 400)) do N
+        c = testcase(:simplewave; N, scheme = SecondOrder(), timestep = TimeStep(mode = :fixed, cfl = 0.4))
+        r = solve(c)
+        r.grid.dx * sum(abs, r.rho .- c.exact(r.grid.x, r.t)[1])
+    end
+    @test all(1.9 .< log2.(errs[1:2] ./ errs[2:3]) .< 2.1)
+end
+
+@testset "second order from a parameter file and in output names" begin
+    dir = mktempdir()
+    file = joinpath(dir, "step2.toml")
+    write(file, replace(read(joinpath(EPB_AP.PARAMS, "step.toml"), String),
+                        r"\[scheme\][^\[]*" => "[scheme]\nkind = \"second\"\nlimiter = \"none\"\nc_D = 2.0\n\n"))
+    c = testcase(file; T = 0.05)
+    @test c.scheme == SecondOrder(limiter = :none, c_D = 2.0)
+    paths = run_case(file; dir, T = 0.05)
+    @test occursin("step_second_N200", paths[1])
+    meta, _, _ = read_csv(paths[1])
+    @test meta["scheme"] == "second" && meta["limiter"] == "none"
+    @test_throws ArgumentError EPB_AP.scheme_from(Dict("kind" => "third"))
+end

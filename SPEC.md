@@ -230,4 +230,7 @@ G_e = v^-_e F_e^+ + v^+_e F_e^- \ (61),
 5. (91) names neither cfl nor $\eta$. **Used:** cfl = 0.4 and $\eta$ of (43) (author's decision). The positivity retry
    is not in the manuscript (author's decision).
 6. (93): the kinetic part is $u_i\dot q_i - \tfrac12 u_i^2\dot\rho_i$.
-
+7. Expansion at $\lambda = 1$: the flow converges on $x = \tfrac12$ and the near-pressureless solution concentrates
+   there from $t \approx 1/(2\pi)$ (first order reaches $\max\rho \approx 130$ at $T = 0.6$). Second order has no
+   positivity guarantee and collapses at $t \approx 0.17$; at $\lambda = 0.1$ it completes. The manuscript runs
+   this case with first order only (§5.6).

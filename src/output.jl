@@ -39,8 +39,9 @@ end
 
 function case_meta(case::TestCase, res::Result, t)
     s = case.scheme
-    m = Pair{String,Any}["case" => case.name, "scheme" => s.kind]
-    s.kind == :dissipation &&
+    m = Pair{String,Any}["case" => case.name, "scheme" => scheme_name(s)]
+    s isa SecondOrder && append!(m, ["limiter" => s.limiter, "D" => "$(s.c_D)*dx^2*dE(rho)", "cfl91" => s.cfl])
+    s isa Scheme && s.kind == :dissipation &&
         append!(m, ["theta" => s.theta, "kappa" => "$(s.kappa_c)*dx*(max|u|+$(s.kappa_s))"])
     return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "bc" => case.bc, "lambda" => case.lambda,
         "T" => case.T, "t" => t, "steps" => res.steps, "status" => res.status,
@@ -73,7 +74,7 @@ the exact solution), and the per-step history. Returns the file paths; `solve(te
 function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     case = testcase(src; kw...)
     res = solve(case)
-    base = joinpath(dir, "$(case.name)_$(case.scheme.kind)_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
+    base = joinpath(dir, "$(case.name)_$(scheme_name(case.scheme))_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
     paths = String[]
     for (t, ρ, u, φ) in res.snapshots
         meta = case_meta(case, res, t)

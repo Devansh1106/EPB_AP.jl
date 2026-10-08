@@ -17,6 +17,10 @@ Base.@kwdef struct SecondOrder
     end
 end
 
+"Name of a scheme in output file names and metadata."
+scheme_name(s::Scheme) = s.kind
+scheme_name(::SecondOrder) = :second
+
 "Minmod of two slopes (§4.1)."
 minmod(a, b) = a * b <= 0 ? zero(a) : (abs(a) < abs(b) ? a : b)
 
