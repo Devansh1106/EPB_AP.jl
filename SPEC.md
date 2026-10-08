@@ -109,7 +109,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
-| smooth (§5.2) | $[0,1]$ | $1+0.3\sin 2\pi x$, $0.2\cos 2\pi x$ | 1, 1e-2, 1e-4 | 0.5 (AP: 0.3; order: 0.2) | 200; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
+| smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, 0 | 1 | 1 | 50; order 100…800 | (44); order: $\le 0.4\Delta x$ | fine grid $N=3200$, cell-averaged |
 | steep (§5.2) | $[0,1]$ | $1+0.8\sin^3 2\pi x$, $0.25\cos 2\pi x$ | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
