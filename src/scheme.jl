@@ -1,27 +1,24 @@
 """
-    Scheme(; kind = :shift, eta = :local, theta = 0.5, kappa_c = 0.5, kappa_s = 0.0)
+    Scheme(; kind = :shift, theta = 0.5, kappa_c = 0.5, kappa_s = 0.0)
 
 First-order fully discrete scheme.
 
 * `kind = :shift`: §3.3 (Theorem 3.5), `Q = η Δt ∂E φⁿ⁺¹`, η from (43), time step (44), (CFL).
 * `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ λ² ∂E ΔM φⁿ⁺¹`,
   `μ = η Δt + κ ρ̂ⁿ`, η from Corollary 3.17(i), time step of Remark 3.22, (CFLθ).
-* `eta = :global` uses the maximum of the edge coefficient at every edge (§5.2).
 * `κⁿ = kappa_c Δx (max|uⁿ| + kappa_s)` (Remark 3.23; only for `:dissipation`).
 """
 Base.@kwdef struct Scheme
     kind::Symbol = :shift
-    eta::Symbol = :local
     theta::Float64 = 0.5
     kappa_c::Float64 = 0.5
     kappa_s::Float64 = 0.0
 end
 
-"Edge coefficient η: (43) for `:shift`, Corollary 3.17(i) for `:dissipation`."
+"Local edge coefficient η_e: (43) for `:shift`, Corollary 3.17(i) for `:dissipation`."
 function eta_coefficient(ρ, sch::Scheme)
     c = sch.kind == :shift ? 5 / 4 : 1 / (2 * (1 - sch.theta))
-    η = c .* edgemap(logmean, ρ) .^ 2 ./ edgemap(harmonic, ρ)
-    return sch.eta == :global ? fill(maximum(η), length(η)) : η
+    return c .* edgemap(logmean, ρ) .^ 2 ./ edgemap(harmonic, ρ)
 end
 
 "Constant density-dissipation coefficient κⁿ (Remark 3.23); zero for `:shift`."

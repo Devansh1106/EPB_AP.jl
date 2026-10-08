@@ -9,7 +9,6 @@ snapshots = []       # extra output times in (0, T)
 
 [scheme]
 kind = "shift"       # "shift" (§3.3) or "dissipation" (§3.4)
-eta = "local"        # "local" or "global" edge coefficient η
 
 [timestep]
 mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
