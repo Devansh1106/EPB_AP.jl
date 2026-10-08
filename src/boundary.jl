@@ -1,4 +1,5 @@
 # Periodic boundary conditions (§2.1): cell and edge indices are taken modulo N.
+# Walls reuse this indexing with the edge stored at index N set to zero (grid.jl).
 # Edge e = i + 1/2 is stored at index i, so cell i has edges i (right) and left(i, N) (left).
 
 "Index of the right neighbour of cell `i` on a periodic grid of `N` cells."

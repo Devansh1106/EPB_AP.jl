@@ -1,0 +1,6 @@
+[deps]
+EPB_AP = "6eaf30bb-94d3-4aba-9730-811735af94f2"
+Plots = "91a5bcdd-55d7-5caf-9e0b-520d859cae80"
+
+[sources]
+EPB_AP = {path = ".."}

@@ -4,7 +4,7 @@
 First-order fully discrete scheme.
 
 * `kind = :shift`: §3.3 (Theorem 3.5), `Q = η Δt ∂E φⁿ⁺¹`, η from (43), time step (44), (CFL).
-* `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ ε² ∂E ΔM φⁿ⁺¹`,
+* `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ λ² ∂E ΔM φⁿ⁺¹`,
   `μ = η Δt + κ ρ̂ⁿ`, η from Corollary 3.17(i), time step of Remark 3.22, (CFLθ).
 * `eta = :global` uses the maximum of the edge coefficient at every edge (§5.2).
 * `κⁿ = kappa_c Δx (max|uⁿ| + kappa_s)` (Remark 3.23; only for `:dissipation`).
@@ -29,25 +29,27 @@ kappa_coefficient(u, dx, sch::Scheme) =
     sch.kind == :shift ? 0.0 : sch.kappa_c * dx * (maximum(abs, u) + sch.kappa_s)
 
 # Sparse edge gradient D (rows: edges, columns: cells), so that divM = -Dᵀ and -ΔM = DᵀD.
-function gradient_matrix(N, dx)
-    I = [1:N; 1:N]
-    J = [1:N; [right(i, N) for i in 1:N]]
-    V = [fill(-1 / dx, N); fill(1 / dx, N)]
+# With walls the row of edge N is empty.
+function gradient_matrix(N, dx; wall = false)
+    E = wall ? N - 1 : N
+    I = [1:E; 1:E]
+    J = [1:E; [right(i, N) for i in 1:E]]
+    V = [fill(-1 / dx, E); fill(1 / dx, E)]
     return sparse(I, J, V, N, N)
 end
 
 """
-    solve_potential(φ, rhs, μ, κ, ε, dt, dx)
+    solve_potential(φ, rhs, μ, κ, λ, dt, dx; wall = false)
 
-Newton's method for (52): `e^φ - ε² ΔM φ - Δt divM(μ ∂E φ) + κ ε² Δt ΔM² φ = rhs`, starting from `φ`.
-The Jacobian is the SPD matrix of Remark 3.22, periodic corners included.
+Newton's method for (52): `e^φ - λ² ΔM φ - Δt divM(μ ∂E φ) + κ λ² Δt ΔM² φ = rhs`, starting from `φ`.
+The Jacobian is the SPD matrix of Remark 3.22, periodic corners included (none with walls).
 """
-function solve_potential(φ, rhs, μ, κ, ε, dt, dx; tol = 1e-12, maxit = 50)
+function solve_potential(φ, rhs, μ, κ, λ, dt, dx; wall = false, tol = 1e-12, maxit = 50)
     N = length(φ)
-    D = gradient_matrix(N, dx)
+    D = gradient_matrix(N, dx; wall)
     L = D' * D
-    A = ε^2 * L + dt * (D' * spdiagm(0 => μ) * D)
-    κ > 0 && (A += κ * ε^2 * dt * (L * L))
+    A = λ^2 * L + dt * (D' * spdiagm(0 => μ) * D)
+    κ > 0 && (A += κ * λ^2 * dt * (L * L))
     φ = copy(φ)
     for _ in 1:maxit
         e = exp.(φ)
@@ -64,24 +66,27 @@ function solve_potential(φ, rhs, μ, κ, ε, dt, dx; tol = 1e-12, maxit = 50)
 end
 
 "Initial potential from ρ by (29)."
-initial_potential(ρ, ε, dx) = solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, ε, 0.0, dx)
+initial_potential(ρ, λ, dx; wall = false) =
+    solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, λ, 0.0, dx; wall)
 
 """
-    step(ρ, u, φ, dt, dx, ε, η, κ)
+    step(ρ, u, φ, dt, dx, λ, η, κ; wall = false)
 
-One step of (27)–(29) with the given edge coefficients η and constant κ (κ = 0 gives §3.3).
+One step of (27)–(29) with the given edge coefficients η and constant κ (κ = 0 gives §3.3);
+with `wall`, F = G = 0 and ∂E φ = 0 on the walls.
 Returns `(ρ, u, φ, F)` at level n + 1, F being the mass flux used.
 """
-function step(ρ, u, φ, dt, dx, ε, η, κ)
+function step(ρ, u, φ, dt, dx, λ, η, κ; wall = false)
     N = length(ρ)
     ρbar = edgemap(logmean, ρ)                      # (17)
     conv = ρbar .* avg(u)                           # ρ̄ {u}
+    wall && (conv[end] = 0)
     μ = η .* dt
     κ > 0 && (μ = μ .+ κ .* edgemap(logmean, exp.(φ)))   # μ of (52), linearised ρ̂ⁿ
-    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx), μ, κ, ε, dt, dx)
-    dφ = grad(φ1, dx)
+    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx), μ, κ, λ, dt, dx; wall)
+    dφ = grad(φ1, dx; wall)
     Q = μ .* dφ
-    κ > 0 && (Q = Q .- κ * ε^2 .* grad(lap(φ1, dx), dx))  # (46)
+    κ > 0 && (Q = Q .- κ * λ^2 .* grad(lap(φ1, dx; wall), dx; wall))  # (46)
     F = conv .- Q                                   # (18)
     ρ1 = ρ .- dt .* divm(F, dx)                     # (27)
     G = [F[e] >= 0 ? u[e] * F[e] : u[right(e, N)] * F[e] for e in 1:N]   # (19)
@@ -95,16 +100,18 @@ end
 outward(F, i) = (F[i], -F[left(i, length(F))])
 
 """
-    stable_dt(ρ, u, φ, dx, η, κ, sch)
+    stable_dt(ρ, u, φ, dx, η, κ, sch; wall = false)
 
-Time step from (44) (`:shift`, with C_i = Δx Σ η|∂E φⁿ|) or Remark 3.22 (`:dissipation`).
+Time step from (44) (`:shift`, with C_i = Δx Σ η|∂E φⁿ|) or Remark 3.22 times 0.9 (`:dissipation`);
+no other bound (SPEC §5).
 """
-function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme)
+function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme; wall = false)
     N = length(ρ)
-    d = η .* abs.(grad(φ, dx))
+    d = η .* abs.(grad(φ, dx; wall))
     X = Inf
     if sch.kind == :shift
         a = abs.(edgemap(logmean, ρ) .* avg(u))
+        wall && (a[end] = 0)
         for i in 1:N
             A = a[i] + a[left(i, N)]
             C = dx * (d[i] + d[left(i, N)])
@@ -113,13 +120,14 @@ function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme)
         return X * dx
     end
     θ = sch.theta
-    c = edgemap(logmean, ρ) .* avg(u) .- κ .* grad(ρ, dx)
+    c = edgemap(logmean, ρ) .* avg(u) .- κ .* grad(ρ, dx; wall)
+    wall && (c[end] = 0)
     for i in 1:N
         A = sum(max.(outward(c, i), 0))
         C = dx * (d[i] + d[left(i, N)])
         X = min(X, 2θ * ρ[i] / (A + sqrt(A^2 + 4θ * C * ρ[i])))
     end
-    return min(0.9X * dx, 0.9dx / (maximum(abs, u) + 1))
+    return 0.9X * dx
 end
 
 """

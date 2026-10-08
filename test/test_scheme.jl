@@ -14,14 +14,14 @@ end
 @testset "Poisson solve (29) and (52)" begin
     g = Grid(0, 1, 64)
     ρ = 1 .+ 0.5sinpi.(2g.x)
-    for ε in (1.0, 1e-3, 1e-6)
-        φ = initial_potential(ρ, ε, g.dx)
-        @test maximum(abs, -ε^2 .* lap(φ, g.dx) .+ exp.(φ) .- ρ) < 1e-10
+    for λ in (1.0, 1e-3, 1e-6)
+        φ = initial_potential(ρ, λ, g.dx)
+        @test maximum(abs, -λ^2 .* lap(φ, g.dx) .+ exp.(φ) .- ρ) < 1e-10
     end
-    μ, κ, ε, dt = rand(64), 0.3, 0.5, 0.01
-    φ = solve_potential(zeros(64), ρ, μ, κ, ε, dt, g.dx)
-    r = exp.(φ) .- ε^2 .* lap(φ, g.dx) .- dt .* divm(μ .* grad(φ, g.dx), g.dx) .+
-        κ * ε^2 * dt .* lap(lap(φ, g.dx), g.dx) .- ρ
+    μ, κ, λ, dt = rand(64), 0.3, 0.5, 0.01
+    φ = solve_potential(zeros(64), ρ, μ, κ, λ, dt, g.dx)
+    r = exp.(φ) .- λ^2 .* lap(φ, g.dx) .- dt .* divm(μ .* grad(φ, g.dx), g.dx) .+
+        κ * λ^2 * dt .* lap(lap(φ, g.dx), g.dx) .- ρ
     @test maximum(abs, r) < 1e-8
 end
 
@@ -33,8 +33,8 @@ end
               (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)),
               (ifelse.(x .< 0.5, 1.0, 0.3), ifelse.(x .< 0.5, 0.4, -0.4)),
               (0.5 .+ rand(N), 2 .* rand(N) .- 1)]
-    for (ρ, u) in states, ε in (1.0, 1e-2)
-        φ = initial_potential(ρ, ε, dx)
+    for (ρ, u) in states, λ in (1.0, 1e-2)
+        φ = initial_potential(ρ, λ, dx)
         ρbar = edgemap(logmean, ρ)
         F = ρbar .* avg(u)
         G = [F[e] >= 0 ? u[e] * F[e] : u[right(e, N)] * F[e] for e in 1:N]
@@ -53,24 +53,24 @@ end
     for kind in (:shift, :dissipation), _ in 1:200
         N = 48
         g = Grid(0, 1, N)
-        ρ, u, ε = random_state(rng, N)
+        ρ, u, λ = random_state(rng, N)
         θ = rand(rng, (0.2, 0.5, 0.8))
         sch = Scheme(; kind, theta = θ)
-        φ = initial_potential(ρ, ε, g.dx)
+        φ = initial_potential(ρ, λ, g.dx)
         η = eta_coefficient(ρ, sch)
         κ = kind == :shift ? 0.0 : 10.0^(2rand(rng) - 1) * g.dx / 2 * (maximum(abs, u) + 1)
         dt = 1.0
         local ρ1, u1, φ1, F
         while true
-            ρ1, u1, φ1, F = step(ρ, u, φ, dt, g.dx, ε, η, κ)
+            ρ1, u1, φ1, F = step(ρ, u, φ, dt, g.dx, λ, η, κ)
             cfl_ratio(ρ, F, dt, g.dx, sch) <= 1 && break
             dt /= 2
         end
-        E0 = energy(ρ, u, φ, ε, g.dx)
+        E0 = energy(ρ, u, φ, λ, g.dx)
         @test sum(ρ1) ≈ sum(ρ) rtol = 1e-12
-        @test maximum(abs, -ε^2 .* lap(φ1, g.dx) .+ exp.(φ1) .- ρ1) <= 1e-8 * maximum(ρ1)
+        @test maximum(abs, -λ^2 .* lap(φ1, g.dx) .+ exp.(φ1) .- ρ1) <= 1e-8 * maximum(ρ1)
         @test all(ρ1 .>= (kind == :shift ? 4 / 5 : 1 - θ) .* ρ .* (1 - 1e-12))
-        @test energy(ρ1, u1, φ1, ε, g.dx) <= E0 + 1e3 * eps() * max(1, abs(E0))
+        @test energy(ρ1, u1, φ1, λ, g.dx) <= E0 + 1e3 * eps() * max(1, abs(E0))
     end
 end
 
