@@ -28,7 +28,7 @@ const PARAMS = joinpath(dirname(@__DIR__), "params")
 
 # Initial data, exact solution and diagnostics of a case; `p` holds the `[init]` table of its file.
 function problem(name::Symbol, domain, λ, p)
-    name == :smooth && return (init = x -> (1 .- 0.3sech.(2x), zero(x)),)
+    name == :smooth && return (init = x -> (1 .- 0.3sech.(2x), fill(float(p["U"]), length(x))),)
     name == :steep && return (init = x -> (1 .+ 0.8sinpi.(2x) .^ 3, 0.25cospi.(2x)),)
     name == :nearvacuum && return (init = x -> (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)),)
     name == :bump && return (init = x -> (1 .+ 0.5exp.(-(x .- 0.5) .^ 2 ./ 0.005), one.(x)),)

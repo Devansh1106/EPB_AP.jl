@@ -109,7 +109,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
-| smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, 0 | 1 | 1 | 50; order 100…800 | (44); order: $\le 0.4\Delta x$ | fine grid $N=3200$, cell-averaged |
+| smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
 | steep (§5.2) | $[0,1]$ | $1+0.8\sin^3 2\pi x$, $0.25\cos 2\pi x$ | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
@@ -128,6 +128,8 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
   $\lambda^2\phi'' = e^\phi - \rho(\phi)$ from $(\phi_{max}, 0)$ with RK4 ($h = 10^{-3}$) and Hermite interpolation;
   the exact solution at $t$ is the profile at $\xi = x - 20 - ct$ (periodic).
 * Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
+* smooth: the at-rest dip of EulerAP.jl moved with the uniform drift $U$ (Galilean invariance on the periodic domain), so
+  $u > 0$ everywhere: (44) gives $\Delta t \propto \Delta x$ (from rest, (90): $\propto \sqrt{\Delta x}$) and there is no stagnation point.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
   Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,

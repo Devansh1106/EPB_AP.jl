@@ -41,5 +41,5 @@ Each panel shows the initial data (dotted), the numerical solution and, if known
 ```sh
 julia --project=scripts scripts/convergence.jl simplewave --scheme shift --N 100,200,400,800
 julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var rho,m   # only some variables
-julia --project=scripts scripts/convergence.jl smooth --dtmax 0.4 --ref 3200   # no exact solution: fine-grid reference
+julia --project=scripts scripts/convergence.jl smooth --ref 3200     # no exact solution: fine-grid reference
 ```
