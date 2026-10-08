@@ -38,6 +38,6 @@ julia --project=scripts scripts/plot.jl data/step_dissipation_N200_lambda0.1_T1.
 
 ```sh
 julia --project=scripts scripts/convergence.jl simplewave --scheme shift --N 100,200,400,800
-julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var m
+julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var rho,m   # only some variables
 julia --project=scripts scripts/convergence.jl smooth --T 0.2 --ref 3200     # no exact solution: fine-grid reference
 ```
