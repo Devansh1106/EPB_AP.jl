@@ -2,8 +2,8 @@
 #
 #   julia --project=scripts scripts/plot.jl data/<file>.csv [out.png]
 #
-# The first column is the abscissa; every other column gets a panel, and a column `<name>_exact`
-# is drawn dashed in the panel of `<name>`. The header metadata becomes the title.
+# The first column is the abscissa; every other column gets a panel. In the panel of `<name>`, a column
+# `<name>_init` (initial data) is drawn dotted and a column `<name>_exact` dashed. The header metadata becomes the title.
 using Plots
 
 function read_data(path)
@@ -24,16 +24,18 @@ end
 function plot_file(path; out = replace(path, r"\.csv$" => ".png"))
     meta, names, data = read_data(path)
     x = data[:, 1]
-    cols = filter(n -> n != names[1] && !endswith(n, "_exact"), names)
+    cols = filter(n -> n != names[1] && !endswith(n, "_exact") && !endswith(n, "_init"), names)
     panels = map(cols) do c
         y = data[:, findfirst(==(c), names)]
-        p = plot(x, y; label = "numerical", xlabel = names[1], ylabel = c, lw = 1.5,
-                 yscale = c in ("dt", "ap_residual") && all(>(0), filter(isfinite, y)) ? :log10 : :identity)
-        lo, hi = extrema(filter(isfinite, y))
+        i = findfirst(==(c * "_init"), names)
+        p = i === nothing ? plot() : plot(x, data[:, i]; label = "initial", ls = :dot, lw = 1.5, color = :gray)
+        plot!(p, x, y; label = "numerical", xlabel = names[1], ylabel = c, lw = 1.5, color = :blue,
+              yscale = c in ("dt", "ap_residual") && all(>(0), filter(isfinite, y)) ? :log10 : :identity)
+        lo, hi = extrema(filter(isfinite, i === nothing ? y : [y; data[:, i]]))
         w = max(1, abs(hi))
         hi - lo < 1e-9w && ylims!(p, (lo - 1e-6w, hi + 1e-6w))   # constant up to round-off (e.g. mass)
         e = findfirst(==(c * "_exact"), names)
-        e === nothing || plot!(p, x, data[:, e]; label = "exact", ls = :dash, lw = 1.5)
+        e === nothing || plot!(p, x, data[:, e]; label = "exact", ls = :dash, lw = 1.5, color = :red)
         p
     end
     title = join(filter(!isempty, [get(meta, k, "") for k in ("case", "scheme")]), ", ") *

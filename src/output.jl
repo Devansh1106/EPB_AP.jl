@@ -47,8 +47,13 @@ function case_meta(case::TestCase, res::Result, t)
         "timestep" => "mode=$(case.timestep.mode), cfl=$(case.timestep.cfl), dtmax=$(case.timestep.dtmax)"]]
 end
 
-function solution_columns(case, x, t, ρ, u, φ)
-    names, cols = ["x", "rho", "u", "phi"], Any[x, ρ, u, φ]
+# Numerical solution, initial data (φ⁰ from (29)) and, if known, the exact solution at time t.
+function solution_columns(case, grid, t, ρ, u, φ)
+    x = grid.x
+    ρ0, u0 = case.init(x)
+    φ0 = initial_potential(ρ0, case.lambda, grid.dx; wall = grid.bc == :wall)
+    names = ["x", "rho", "u", "phi", "rho_init", "u_init", "phi_init"]
+    cols = Any[x, ρ, u, φ, ρ0, u0, φ0]
     if case.exact !== nothing
         ρe, ue, φe = case.exact(x, t)
         append!(names, ["rho_exact", "u_exact", "phi_exact"]); append!(cols, [ρe, ue, φe])
@@ -61,7 +66,8 @@ end
 
 Solve a test case, given by name (`params/<name>.toml`) or by parameter file, with keywords as in
 [`testcase`](@ref), and write CSV files to `dir`:
-the solution at the final time, one file per snapshot, and the per-step history.
+the solution at the final time and one file per snapshot (each with the initial data and, if known,
+the exact solution), and the per-step history.
 """
 function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     case = testcase(src; kw...)
@@ -70,11 +76,11 @@ function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     paths = String[]
     for (t, ρ, u, φ) in res.snapshots
         meta = case_meta(case, res, t)
-        push!(paths, write_csv("$(base)_t$(t).csv", meta, solution_columns(case, res.grid.x, t, ρ, u, φ)...))
+        push!(paths, write_csv("$(base)_t$(t).csv", meta, solution_columns(case, res.grid, t, ρ, u, φ)...))
     end
     meta = [case_meta(case, res, res.t); case.diagnostics(case, res)]
     push!(paths, write_csv("$(base).csv", meta,
-                           solution_columns(case, res.grid.x, res.t, res.rho, res.u, res.phi)...))
+                           solution_columns(case, res.grid, res.t, res.rho, res.u, res.phi)...))
     h = res.history
     push!(paths, write_csv("$(base)_history.csv", meta, collect(String.(keys(h))), collect(values(h))))
     return res, paths

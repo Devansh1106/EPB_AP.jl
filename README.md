@@ -34,6 +34,8 @@ julia --project=scripts -e 'using Pkg; Pkg.instantiate()'    # once
 julia --project=scripts scripts/plot.jl data/step_dissipation_N200_lambda0.1_T1.0.csv
 ```
 
+Each panel shows the initial data (dotted), the numerical solution and, if known, the exact solution (dashed).
+
 ## Convergence
 
 ```sh

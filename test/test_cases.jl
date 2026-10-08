@@ -78,8 +78,9 @@ end
     meta, names, data = read_csv(paths[2])
     @test meta["case"] == "riemann" && meta["N"] == "400" && meta["T"] == "2.0" && meta["bc"] == "wall"
     @test haskey(meta, "shock_speed")
-    @test names == ["x", "rho", "u", "phi", "rho_exact", "u_exact", "phi_exact"]
+    @test names == ["x", "rho", "u", "phi", "rho_init", "u_init", "phi_init", "rho_exact", "u_exact", "phi_exact"]
     @test data[:, 2] == r.rho
+    @test data[:, 5:6] == hcat(testcase(:riemann).init(r.grid.x)...)
     meta, names, data = read_csv(paths[3])
     @test names[1:3] == ["t", "dt", "energy"] && size(data, 1) == r.steps + 1
 end
