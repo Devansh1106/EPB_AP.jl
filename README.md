@@ -35,6 +35,8 @@ julia --project=scripts scripts/plot.jl data/step_dissipation_N200_lambda0.1_T1.
 ```
 
 Each panel shows the initial data (dotted), the numerical solution and, if known, the exact solution (dashed).
+Several files are drawn in the same panels, e.g. two schemes or grids, with an optional output name:
+`scripts/plot.jl data/a.csv data/b.csv compare.png`.
 
 ## Convergence
 

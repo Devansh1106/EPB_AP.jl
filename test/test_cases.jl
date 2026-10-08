@@ -73,7 +73,9 @@ end
 
 @testset "CSV output" begin
     dir = mktempdir()
-    r, paths = run_case(:riemann; dir, N = 400, T = 2.0, snapshots = [1.0])
+    paths = run_case(:riemann; dir, N = 400, T = 2.0, snapshots = [1.0])
+    @test paths isa Vector{String}
+    r = solve(testcase(:riemann; N = 400, T = 2.0, snapshots = [1.0]))
     @test length(paths) == 3 && all(isfile, paths)
     meta, names, data = read_csv(paths[2])
     @test meta["case"] == "riemann" && meta["N"] == "400" && meta["T"] == "2.0" && meta["bc"] == "wall"
