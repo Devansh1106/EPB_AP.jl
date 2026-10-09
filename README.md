@@ -50,5 +50,8 @@ julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var r
 julia --project=scripts scripts/convergence.jl smooth --ref 3200     # no exact solution: fine-grid reference
 julia --project=scripts scripts/convergence.jl simplewave --scheme second --fixed 0.4   # Δt = 0.4Δx
 julia --project=scripts scripts/convergence.jl smooth --scheme second --limiter none --c_D 0 --ref 3200
+julia --project=scripts scripts/convergence.jl smooth --scheme second --plot yes --slope 1,2   # log–log plot
 ```
 `--scheme` keeps the file's settings when the kind is unchanged; unknown options are an error.
+`--plot yes` writes `convergence_<case>_<scheme>[_<limiter>]_lambda<λ>.png` (or `--plot out.png`): L1, L2 and L∞
+errors against N per variable, with dashed reference slopes (default: the scheme's order).
