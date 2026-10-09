@@ -119,4 +119,9 @@ end
     meta, _, _ = read_csv(paths[1])
     @test meta["scheme"] == "second" && meta["limiter"] == "none"
     @test_throws ArgumentError EPB_AP.scheme_from(Dict("kind" => "third"))
+    # only `kind` needs to change: keys of the other order are ignored
+    d = Dict("kind" => "second", "theta" => 0.5, "kappa_c" => 0.5, "kappa_s" => 0.0, "c_D" => 0.0)
+    @test EPB_AP.scheme_from(d) == SecondOrder(c_D = 0.0)
+    @test EPB_AP.scheme_from(Dict("kind" => "dissipation", "theta" => 0.4, "limiter" => "none")) ==
+          Scheme(kind = :dissipation, theta = 0.4)
 end

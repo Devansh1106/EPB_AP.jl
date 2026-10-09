@@ -8,10 +8,13 @@ T = 30.76923076923077  # final time (L/c)
 snapshots = []       # extra output times in (0, T)
 
 [scheme]
-kind = "dissipation" # "shift" (§3.3) or "dissipation" (§3.4)
-theta = 0.5          # θ of Corollary 3.17
+kind = "dissipation" # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4)
+theta = 0.5          # "dissipation" only: θ of Corollary 3.17
 kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
 kappa_s = 0.0
+# limiter = "minmod" # "second" only: "minmod" or "none" (central slopes)
+# c_D = 1.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
+# cfl = 0.4          # "second" only: cfl of (91)
 
 [timestep]
 mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx

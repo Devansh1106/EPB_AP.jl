@@ -54,11 +54,14 @@ symbols(d) = (; (Symbol(k) => (v isa String ? Symbol(v) : v) for (k, v) in d)...
     scheme_from(d)
 
 Scheme from the `[scheme]` table of a parameter file (or any `Dict`): `kind = "second"` gives
-[`SecondOrder`](@ref), `"shift"` or `"dissipation"` a first-order [`Scheme`](@ref); the other keys are passed on.
+[`SecondOrder`](@ref), `"shift"` or `"dissipation"` a first-order [`Scheme`](@ref); the other keys are passed on,
+except those of the other order, which are ignored, so that only `kind` needs to change.
 """
 function scheme_from(d)
-    get(d, "kind", "shift") == "second" || return Scheme(; symbols(d)...)
-    return SecondOrder(; symbols(filter(p -> p.first != "kind", d))...)
+    second = get(d, "kind", "shift") == "second"
+    other = second ? ("kind", "theta", "kappa_c", "kappa_s") : ("limiter", "c_D", "cfl")
+    kw = symbols(filter(p -> !(p.first in other), d))
+    return second ? SecondOrder(; kw...) : Scheme(; kw...)
 end
 
 """

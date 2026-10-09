@@ -22,7 +22,8 @@ run_case(:step)                                      # writes data/step_dissipat
 run_case(:smooth; lambda = 1e-2, scheme = Scheme())  # override any default
 run_case(:smooth; scheme = SecondOrder())            # second order (limiter = :minmod or :none, c_D, cfl)
 ```
-In a parameter file, second order is `kind = "second"` under `[scheme]`.
+In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of the other order (`theta`, `kappa_*`
+or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change.
 Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed`.
 
 ## Parameters
