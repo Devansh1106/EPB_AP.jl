@@ -92,11 +92,13 @@ function step(ρ, u, φ, dt, dx, λ, η, κ; wall = false)
     F = conv .- Q                                   # (18)
     ρ1 = ρ .- dt .* divm(F, dx)                     # (27)
     G = [F[e] >= 0 ? u[e] * F[e] : u[right(e, N)] * F[e] for e in 1:N]   # (19)
-    a = ρbar .* dφ
-    S = [-(a[i] + a[left(i, N)]) / 2 for i in 1:N]  # (15)
+    S = source(ρbar, dφ)                            # (15)
     m1 = ρ .* u .- dt .* divm(G, dx) .+ dt .* S     # (28)
     return ρ1, m1 ./ ρ1, φ1, F
 end
+
+"Source (15): `S_i = -(ρ̄ ∂E φ)_{i+1/2}/2 - (ρ̄ ∂E φ)_{i-1/2}/2`, from edge values ρ̄ and ∂E φ."
+source(ρbar, dφ) = (a = ρbar .* dφ; [-(a[i] + a[left(i, length(a))]) / 2 for i in eachindex(a)])
 
 # Outward flux of cell i through edge e = i (right) and e = i-1 (left), convention (13).
 outward(F, i) = (F[i], -F[left(i, length(F))])

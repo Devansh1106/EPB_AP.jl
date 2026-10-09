@@ -1,15 +1,16 @@
 # Convergence study for one test case on a sequence of refined grids.
 #
-#   julia --project=scripts scripts/convergence.jl <case | file.toml> [--scheme shift|dissipation] [--lambda λ] [--T T]
-#         [--N 100,200,400,800] [--dtmax c] [--var rho,u,phi,m] [--ref Nref]
+#   julia --project=scripts scripts/convergence.jl <case | file.toml> [--scheme shift|dissipation|second] [--lambda λ] [--T T]
+#         [--N 100,200,400,800] [--dtmax c] [--fixed c] [--var rho,u,phi,m] [--ref Nref]
 #
 # One table per variable (default: all of ρ, u, φ and m = ρu); each grid is solved once.
+# --dtmax c caps the scheme's Δt rule at c·Δx; --fixed c uses Δt = c·Δx (§5.4 order studies: 0.4).
 # Errors are measured against the exact solution when the case has one; otherwise against a
 # reference computed by the same scheme on Nref cells (default 4·max N), restricted by cell averaging.
 using EPB_AP, Printf
 
 function parse_args(args)
-    isempty(args) && error("usage: convergence.jl <case> [--scheme ..] [--lambda ..] [--T ..] [--N ..] [--dtmax ..] [--var ..] [--ref ..]")
+    isempty(args) && error("usage: convergence.jl <case> [--scheme ..] [--lambda ..] [--T ..] [--N ..] [--dtmax ..] [--fixed ..] [--var ..] [--ref ..]")
     opts = Dict(args[i][3:end] => args[i+1] for i in 2:2:length(args)-1)
     return endswith(args[1], ".toml") ? args[1] : Symbol(args[1]), opts
 end
@@ -21,10 +22,11 @@ restrict(v, N) = vec(sum(reshape(v, length(v) ÷ N, N); dims = 1)) ./ (length(v)
 function main(args)
     name, o = parse_args(args)
     kw = Dict{Symbol,Any}()
-    haskey(o, "scheme") && (kw[:scheme] = Scheme(kind = Symbol(o["scheme"])))
+    haskey(o, "scheme") && (kw[:scheme] = EPB_AP.scheme_from(Dict("kind" => o["scheme"])))
     haskey(o, "lambda") && (kw[:lambda] = parse(Float64, o["lambda"]))
     haskey(o, "T") && (kw[:T] = parse(Float64, o["T"]))
     haskey(o, "dtmax") && (kw[:timestep] = TimeStep(dtmax = parse(Float64, o["dtmax"])))
+    haskey(o, "fixed") && (kw[:timestep] = TimeStep(mode = :fixed, cfl = parse(Float64, o["fixed"])))
     Ns = parse.(Int, split(get(o, "N", "100,200,400,800"), ","))
     vars = split(get(o, "var", "rho,u,phi,m"), ",")
     case = testcase(name; kw...)
@@ -39,7 +41,7 @@ function main(args)
         reference = (r, var) -> field(case.exact(r.grid.x, r.t)..., var)
         println("Reference: exact solution.")
     end
-    @printf("case = %s, scheme = %s, λ = %g, T = %g\n", case.name, case.scheme.kind, case.lambda, case.T)
+    @printf("case = %s, scheme = %s, λ = %g, T = %g\n", case.name, EPB_AP.scheme_name(case.scheme), case.lambda, case.T)
     runs = map(run, Ns)
     for var in vars
         @printf("\nvariable = %s\n", var)
