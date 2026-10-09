@@ -49,4 +49,6 @@ julia --project=scripts scripts/convergence.jl simplewave --scheme shift --N 100
 julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var rho,m   # only some variables
 julia --project=scripts scripts/convergence.jl smooth --ref 3200     # no exact solution: fine-grid reference
 julia --project=scripts scripts/convergence.jl simplewave --scheme second --fixed 0.4   # Δt = 0.4Δx
+julia --project=scripts scripts/convergence.jl smooth --scheme second --limiter none --c_D 0 --ref 3200
 ```
+`--scheme` keeps the file's settings when the kind is unchanged; unknown options are an error.
