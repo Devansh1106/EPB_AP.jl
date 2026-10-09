@@ -1,10 +1,10 @@
 # Parameters of the test case `soliton`: ion-acoustic soliton (§5.6). See SPEC §7.
 case = "soliton"     # initial data (and exact solution) of this case
-domain = [0.0, 40.0] # [a, b]
+domain = [0.0, 50.0] # [a, b]; L = 50λ as Degond et al. (the manuscript has 40)
 bc = "periodic"       # "periodic" or "wall"
-N = 400              # number of cells
+N = 500              # number of cells (Δx = 0.1)
 lambda = 1.0         # scale parameter λ of the Poisson equation
-T = 30.76923076923077  # final time (L/c)
+T = 38.46153846153846  # final time t_L = L/c = 50/1.3
 snapshots = []       # extra output times in (0, T)
 
 [scheme]
@@ -22,4 +22,4 @@ cfl = 0.25           # used only when mode = "fixed"
 dtmax = inf          # upper bound on Δt/Δx
 
 [init]
-c = 1.3              # soliton speed; change T with it (T = L/c is one domain traversal)
+c = 1.3              # soliton speed; change T with it (t_L = L/c is one domain traversal; 5 t_L = 192.30769230769232)

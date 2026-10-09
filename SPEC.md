@@ -115,7 +115,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 | bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
 | step (§5.6) | $[0,1]$ | 1 on $(\tfrac14,\tfrac34)$, $\tfrac12$ else; 0 | 0.1 | 1 | 200, 800, 3200 | scheme rule | $\min\rho$ stays $\tfrac12$ |
 | expansion (§5.6) | $[0,1]$ | 1, $\sin 2\pi x$ | 1, 0.1 | 0.6 | 200 (400, 1600 at $\lambda=0.1$) | scheme rule | $\rho(0,T) \to 1/(1+2\pi T)$ |
-| soliton (§5.6) | $[0,40]$ | travelling wave $c=1.3$, peak at $x=20$ | 1 | order 2; robustness $L/c$ | 400; order 100…1600 | rule, $\le 0.4\Delta x$ (order) | exact (translation) |
+| soliton (§5.6) | $[0,50]$ | travelling wave $c=1.3$, peak at $x=25$ | 1 | order 2; robustness $L/c$ | 500; order 100…1600 | rule, $\le 0.4\Delta x$ (order) | exact (translation) |
 | ap (§5.6) | $[0,1]$ | $1+0.2\sin 2\pi x$, $0.2\cos 2\pi x$ | 1 … 1e-6 | 0.2 | 200 | fixed $0.25\Delta x$ | $\lVert e^\phi-\rho\rVert_\infty \propto \lambda^2$ |
 | simple wave (§5.6) | $[0,1]$ | $e^{u^0}$, $0.2\sin 2\pi x$ | 1e-4 | 0.3 | 100…1600 | rule, $\le 0.4\Delta x$ | exact (characteristics) |
 | riemann ([1, §7.4]) | $[-80,100]$, walls | 1 for $x<0$, $n_r$ for $x \ge 0$; $u=0$; $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$ | 1e-4 | 50 | 400 (9000 in [1]) | (44) | ICE solution [1, (7.8)–(7.10)] |
@@ -148,7 +148,7 @@ $\lambda$; observed order ≈ 1.
    $C_i = \Delta x \sum_e \eta_e \lvert\partial_E\phi\rvert$. **Used: with $\Delta x$** (author's decision). Note: the
    printed form reproduces the §5.2 tables to all digits, so those step counts and energy changes differ here;
    all properties (positivity, energy decrease, AP, order) hold with either form.
-2. Soliton robustness $T$ is missing: **$T = L/c = 40/1.3$** (one domain traversal, Degond et al. $t_L$, as instructed).
+2. Soliton robustness $T$ is missing: **$T = t_L = L/c$** (one domain traversal, Degond et al. $t_L$, as instructed). The domain is Degond et al.'s $L = 50\lambda$ ("about $50\lambda_D$", §5.1) rather than the manuscript's 40, with $N = 500$ ($\Delta x = 0.1$), so $T = 50/1.3$.
 3. Riemann: **all data from [1, §7.4]** to reproduce [1, Fig. 8]: domain $[-80,100]$, 9000 cells (default 400 for
    quick runs; set `N` in `params/riemann.toml`), $\lambda = 10^{-4}$,
    $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$, $T = 50$, the boundary conditions of [1] (§7), log mean only, scheme A.

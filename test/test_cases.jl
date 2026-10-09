@@ -12,7 +12,7 @@ using EPB_AP: CASES, lap, riemann_speeds, SolitonProfile
     @test_throws ArgumentError testcase(:nope)
     # parameter files: the values of SPEC §7, and a user file of the same form
     c = testcase(:soliton)
-    @test c.domain == (0.0, 40.0) && c.N == 400 && c.T ≈ 40 / 1.3 && c.scheme == Scheme(kind = :dissipation)
+    @test c.domain == (0.0, 50.0) && c.N == 500 && c.T ≈ 50 / 1.3 && c.scheme == Scheme(kind = :dissipation)
     @test testcase(:ap).timestep == TimeStep(mode = :fixed, cfl = 0.25)
     file = joinpath(mktempdir(), "mine.toml")
     write(file, replace(read(joinpath(EPB_AP.PARAMS, "step.toml"), String), "N = 200" => "N = 64"))
@@ -26,11 +26,11 @@ end
     @test us ≈ 1.17786117 atol = 1e-7
     # soliton: Poisson residual of the profile is the O(Δx²) error of ΔM, and it is a travelling wave
     c = testcase(:soliton)
-    res(N) = (g = Grid(0, 40, N); (ρ, u, φ) = c.exact(g.x, 0.0);
+    res(N) = (g = Grid(0, 50, N); (ρ, u, φ) = c.exact(g.x, 0.0);
               maximum(abs, -lap(φ, g.dx) .+ exp.(φ) .- ρ))
     @test log2(res(1000) / res(2000)) ≈ 2 atol = 0.1
-    g = Grid(0, 40, 400)
-    @test c.exact(g.x, 40 / 1.3)[3] ≈ c.exact(g.x, 0.0)[3] atol = 1e-12
+    g = Grid(0, 50, 500)
+    @test c.exact(g.x, 50 / 1.3)[3] ≈ c.exact(g.x, 0.0)[3] atol = 1e-12
     # simple wave: constant along ẋ = u + 1
     ρ, u, _ = EPB_AP.simplewave_exact([0.3], 0.0)
     @test EPB_AP.simplewave_exact([0.3 + 0.2 * (u[1] + 1)], 0.2)[2] ≈ u atol = 1e-13

@@ -1,9 +1,9 @@
 # Plot CSV files written by EPB_AP (solution, snapshot or history files). Does not run the solver.
 #
-#   julia --project=scripts scripts/plot.jl data/<file>.csv [more.csv ...] [out.png]
+#   julia --project=scripts scripts/plot.jl data/<file>.csv [more.csv ...] [out.png] [--no-init] [--no-exact]
 #
 # The first column is the abscissa; every other column gets a panel. In the panel of `<name>`, a column
-# `<name>_init` (initial data) is drawn dotted and a column `<name>_exact` dashed.
+# `<name>_init` (initial data) is drawn dotted and a column `<name>_exact` dashed; --no-init, --no-exact omit them.
 # Several files are drawn in the same panels: metadata shared by all files becomes the title, metadata
 # that differs (scheme, N, λ, t, ...) labels each curve. Initial data are drawn once per case, exact
 # solutions once per case and time. Default output: the first file with .png (`_compare.png` for several).
@@ -28,7 +28,8 @@ const KEYS = ("case", "scheme", "N", "lambda", "t")
 const SHOW = Dict("lambda" => "λ")
 tag(meta, keys) = join(["$(get(SHOW, k, k))=$(get(meta, k, "?"))" for k in keys], ", ")
 
-function plot_files(paths; out = replace(paths[1], r"\.csv$" => length(paths) == 1 ? ".png" : "_compare.png"))
+function plot_files(paths; out = replace(paths[1], r"\.csv$" => length(paths) == 1 ? ".png" : "_compare.png"),
+                    init = true, exact = true)
     files = read_data.(paths)
     common = [k for k in KEYS if length(unique(get(m, k, "?") for (m, _, _) in files)) == 1]
     differ = [k for k in KEYS if !(k in common)]
@@ -42,7 +43,7 @@ function plot_files(paths; out = replace(paths[1], r"\.csv$" => length(paths) ==
             for (suffix, key, style) in (("_init", (m["case"],), (label = "initial", ls = :dot, color = :gray)),
                                          ("_exact", (m["case"], get(m, "t", "")), (label = "exact", ls = :dash, color = :red)))
                 j = findfirst(==(c * suffix), names)
-                (j === nothing || (suffix, key) in drawn) && continue
+                (j === nothing || (suffix, key) in drawn || !(suffix == "_init" ? init : exact)) && continue
                 push!(drawn, (suffix, key))
                 lab = count(d -> d[1] == suffix, drawn) == 1 ? style.label : "$(style.label), " * tag(m, differ)
                 plot!(p, x, data[:, j]; lw = 1.5, style..., label = lab)
@@ -70,8 +71,13 @@ function plot_files(paths; out = replace(paths[1], r"\.csv$" => length(paths) ==
     println("wrote ", out)
 end
 
+const FLAGS = ("--no-init", "--no-exact")
 isout(a) = occursin(r"\.(png|pdf|svg)$", a)
-inputs, outs = filter(!isout, ARGS), filter(isout, ARGS)
-(isempty(inputs) || length(outs) > 1) &&
-    error("usage: julia --project=scripts scripts/plot.jl data/<file>.csv [more.csv ...] [out.png]")
-plot_files(inputs; (isempty(outs) ? () : (out = outs[1],))...)
+flags, args = filter(startswith("--"), ARGS), filter(!startswith("--"), ARGS)
+inputs, outs = filter(!isout, args), filter(isout, args)
+usage = "usage: julia --project=scripts scripts/plot.jl data/<file>.csv [more.csv ...] [out.png] [--no-init] [--no-exact]"
+(isempty(inputs) || length(outs) > 1) && error(usage)
+for f in flags
+    f in FLAGS || error("unknown option $f\n" * usage)
+end
+plot_files(inputs; (isempty(outs) ? () : (out = outs[1],))..., init = !("--no-init" in flags), exact = !("--no-exact" in flags))
