@@ -176,7 +176,9 @@ $\lambda$; observed order ≈ 1.
 ## 10. Second-order scheme — §4, `SecondOrder()`
 
 Unknowns $(\rho, q)$, $q = \rho u$; $v = q/\rho$. Code: `SecondOrder(; limiter = :minmod, c_D = 1.0, cfl = 0.4)`;
-in a parameter file `kind = "second"` under `[scheme]`. Every test case runs with it.
+in a parameter file `kind = "second"` under `[scheme]`, with the optional keys `limiter` (`"minmod"`, `"none"`), `c_D`
+and `cfl`. Every test case runs with it. Output files are named `<case>_second_...` and their metadata record
+`limiter`, `D` and `cfl91`; `scripts/convergence.jl` takes `--scheme second` and `--fixed 0.4` (Δt = 0.4Δx).
 
 * Reconstruction (54)–(55) on $(\rho, v)$: $w^-_{i+1/2} = w_i + \tfrac12\Delta x\sigma_i$,
   $w^+_{i+1/2} = w_{i+1} - \tfrac12\Delta x\sigma_{i+1}$, $\sigma$ minmod (`limiter = :minmod`) or central (`:none`).
@@ -188,8 +190,10 @@ G_e = v^-_e F_e^+ + v^+_e F_e^- \ (61),
 ```
   $S_i = -\tfrac12\big[(\bar\rho\partial_E\phi)_{i+1/2} + (\bar\rho\partial_E\phi)_{i-1/2}\big]$ (15), $C = \mathrm{div}_M G$.
   The momentum flux is (61) only (author's decision); (64) is not implemented.
-* ARS(2,2,2) (73)–(74): $\gamma = 1 - 1/\sqrt2$, $\delta = 1 - 1/(2\gamma)$. A stage mass flux is
-  $F = E - \gamma\Delta t\bar\rho\partial_E\phi - D$, with $E$, $\bar\rho$ and $D$ from the stage's explicit state.
+* ARS(2,2,2) (73)–(74): $\gamma = 1 - 1/\sqrt2$, $\delta = 1 - 1/(2\gamma)$. The stage-$k$ mass flux is
+  $F^{(k)} = E - a_{kk}\Delta t\bar\rho\partial_E\phi^{(k)} - D$, with $E$, $\bar\rho$ and $D$ from the stage's explicit state and
+  $a_{kk}$ the diagonal of the implicit tableau: $a_{11} = 0$, $a_{22} = a_{33} = \gamma$ (§11 item 8). It is the face value of
+  the stage momentum $q^{(k)}$, whose only $\phi^{(k)}$-dependent part is $a_{kk}\Delta t S^{(k)}$.
 * Stage sequence (76)–(87), from $(\rho^n, q^n, \phi^n)$:
   1. $F^{(1)} = E - D$, $C^{(1)}$, $S^{(1)}$ at $(\rho^n, q^n, \phi^n)$.
   2. $\rho^{(2)}_E = \rho^n - \gamma\Delta t \mathrm{div}_M F^{(1)}$, $\tilde q^{(2)} = q^n - \gamma\Delta t C^{(1)}$,
@@ -204,17 +208,22 @@ G_e = v^-_e F_e^+ + v^+_e F_e^- \ (61),
      $\rho^{n+1} = \rho^n - \Delta t \mathrm{div}_M\big((1-\gamma)F^{(2)} + \gamma F^{(3)}\big)$,
      $q^{n+1} = \hat q^{(3)} + \gamma\Delta t S^{(3)}$.
 * (88) is the solver of §6 with $\mu_e = \gamma^2\Delta t \bar\rho_e$ and $\kappa = 0$, so that
-  $e^{\phi} - \lambda^2\Delta_M\phi = \rho^{(k)}$ holds for the stage density.
+  $e^{\phi} - \lambda^2\Delta_M\phi = \rho^{(k)}$ holds for the stage density. Newton starts from $\phi^n$ at stage 2
+  and from $\phi^{(2)}$ at stage 3. $\rho^{(2)}$ and $q^{(2)}$ are not formed: stage 3 uses only $F^{(2)}$, $C^{(2)}$ and
+  $S^{(2)}$, and $(\rho, q, \phi)^{n+1}$ is stage 3 (stiffly accurate).
 * Time step (§4.11): $\Delta t = \min\big((44),\ (91)\big)$, both with $\eta$ of (43); in (91)
   $\Delta t \le \mathrm{cfl} \Delta x / \max_i\big(\lvert v_i\rvert + \eta_i \max(\lvert\phi_i - \phi_{i-1}\rvert, \lvert\phi_{i+1} - \phi_i\rvert)/\Delta x\big)$,
   $\eta_i$ the larger of the two edge values, cfl = 0.4. A step that makes any stage or reconstructed density
-  non-positive is repeated with $\Delta t/2$; $\Delta t < 10^{-4}\Delta x$ is a collapse. Order studies use
+  non-positive is repeated with $\Delta t/2$; $\Delta t < 10^{-4}\Delta x$ is a collapse. With `TimeStep(mode = :fixed)` there is
+  no retry: a non-positive density is a collapse. With walls the wall edge does not enter (91). Order studies use
   `TimeStep(mode = :fixed, cfl = 0.4)` (§5.4).
 * Walls: $\sigma = 0$ in cells 1 and $N$; $F = G = 0$ and $\partial_E\phi = 0$ on the walls, as in §7.
 * Tests: the rate (93) equals (68) on random states (with the $\beta_e$ of Remark 4.2, both limiters, $c_D \in \lbrace 0, 1, 10\rbrace$);
   $-\mathrm{div}_M F \to -\partial_x(\rho u)$ at order 2 (Proposition 4.9); mass to round-off and $\rho > 0$ on every case;
-  $\lVert e^\phi - \rho\rVert_\infty \propto \lambda^2$; fully discrete $L^1$ order ≈ 2 for $\rho$, $m$, $\phi$ (smooth,
-  simple wave, soliton; $\Delta t = 0.4\Delta x$). No energy test: §4.13 claims no fully discrete inequality.
+  $\lVert e^\phi - \rho\rVert_\infty \propto \lambda^2$ (`ap`, $\lambda = 10^{-3}$–$10^{-5}$); fully discrete $L^1$ order, $\Delta t = 0.4\Delta x$:
+  §5.4 state for $\rho$, $m$, $\phi$ against $N = 1600$ (λ = 1 with `limiter = :none`, see item 9 of §11; λ = 10⁻⁴ with minmod),
+  simple wave for $\rho$ against the exact solution. The "every case" run stops at $T = \min(T, 0.1\,|\Omega|)$.
+  No energy test: §4.13 claims no fully discrete inequality.
 
 ## 11. Second order: unclear items and the reading used
 
@@ -234,3 +243,10 @@ G_e = v^-_e F_e^+ + v^+_e F_e^- \ (61),
    there from $t \approx 1/(2\pi)$ (first order reaches $\max\rho \approx 130$ at $T = 0.6$). Second order has no
    positivity guarantee and collapses at $t \approx 0.17$; at $\lambda = 0.1$ it completes. The manuscript runs
    this case with first order only (§5.6).
+8. Stage 1 says "assemble $F^{(1)}$ by (60)", i.e. with $D^{si}(\phi^n)$. **Used:** $F^{(1)} = E - D$. Stage 1 of ARS(2,2,2) is
+   $U^{(1)} = U^n$ ($a_{11} = 0$), so $q^{(1)} = q^n$ has no implicit force; the manuscript's own count "$0 + \gamma = c_2$" agrees.
+   (59) holds with $a_{kk}$ in place of $\gamma$. With $D^{si}(\phi^n)$ in $F^{(1)}$, $C^{(1)}$ is off by $O(\Delta t)$ and
+   $q$ is first order (§5.4 state, unlimited, $c_D = 0$, $N = 50$–$400$: EOC of $q$ 1.94, 1.83, 1.59 at λ = 1 and
+   1.98, 1.46, 1.16 at λ = 10⁻⁴, against 2.0 with $F^{(1)} = E - D$); over time $\rho$ follows (1.27 with $c_D = 1$).
+9. Remark 4.10 calls the minmod loss "slight". On the §5.4 state at λ = 1, $c_D = 1$, minmod gives a density EOC of
+   1.60, 1.33, 1.31, so the order test at λ = 1 uses unlimited slopes.
