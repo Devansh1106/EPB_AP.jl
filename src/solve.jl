@@ -32,18 +32,18 @@ ap_residual(ρ, φ) = maximum(abs, exp.(φ) .- ρ)
 # Scheme-specific parts of a step: the time-step rule, and one attempt returning `(ρ, u, φ, r)` where
 # r > 1 asks for a repeat with Δt/r ((CFL)/(CFLθ) ratio for first order, 2 after a non-positive density
 # for second order).
-rule_dt(ρ, u, φ, dx, s::Scheme; wall) =
-    stable_dt(ρ, u, φ, dx, eta_coefficient(ρ, s), kappa_coefficient(u, dx, s), s; wall)
-rule_dt(ρ, u, φ, dx, s::SecondOrder; wall) = stable_dt(ρ, u, φ, dx, s; wall)
+rule_dt(ρ, u, φ, dx, s::Scheme; bc) =
+    stable_dt(ρ, u, φ, dx, eta_coefficient(ρ, s; bc), kappa_coefficient(u, dx, s), s; bc)
+rule_dt(ρ, u, φ, dx, s::SecondOrder; bc) = stable_dt(ρ, u, φ, dx, s; bc)
 
-function attempt(ρ, u, φ, dt, dx, λ, s::Scheme; wall)
-    ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, eta_coefficient(ρ, s), kappa_coefficient(u, dx, s); wall)
+function attempt(ρ, u, φ, dt, dx, λ, s::Scheme; bc)
+    ρ1, u1, φ1, F = step(ρ, u, φ, dt, dx, λ, eta_coefficient(ρ, s; bc), kappa_coefficient(u, dx, s); bc)
     return ρ1, u1, φ1, cfl_ratio(ρ, F, dt, dx, s)
 end
 
-function attempt(ρ, u, φ, dt, dx, λ, s::SecondOrder; wall)
+function attempt(ρ, u, φ, dt, dx, λ, s::SecondOrder; bc)
     try
-        return step(ρ, u, φ, dt, dx, λ, s; wall)..., 1.0
+        return step(ρ, u, φ, dt, dx, λ, s; bc)..., 1.0
     catch e
         e isa NonPositiveDensity || rethrow()
         return ρ, u, φ, 2.0
@@ -54,15 +54,16 @@ end
     solve(ρ0, u0, grid, λ, T; scheme = Scheme(), timestep = TimeStep(), snapshots = Float64[])
 
 Integrate the scheme (`Scheme()` first order, `SecondOrder()` second order) from (ρ0, u0) to time T
-on `grid` (periodic or walls);
+on `grid` (periodic, walls or extrapolation);
 φ⁰ is computed from ρ0 by (29).
 `status` is `:completed` or `:collapse`.
 """
 function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeStep(),
                snapshots = Float64[], maxretry = 100)
-    dx, wall = grid.dx, grid.bc == :wall
+    dx, bc = grid.dx, grid.bc
+    wall = bc == :wall
     ρ, u = float.(copy(ρ0)), float.(copy(u0))
-    φ = initial_potential(ρ, λ, dx; wall)
+    φ = initial_potential(ρ, λ, dx; bc)
     hist = (t = [0.0], dt = [NaN], energy = [energy(ρ, u, φ, λ, dx; wall)], min_rho = [minimum(ρ)],
             mass = [dx * sum(ρ)], ap_residual = [ap_residual(ρ, φ)], cfl_ratio = [NaN])
     stops = sort(unique([filter(s -> 0 < s < T, snapshots); T]))
@@ -70,7 +71,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
     t, n, status = 0.0, 0, :completed
     while t < T
         target = first(filter(s -> s > t, stops))
-        dt = timestep.mode == :fixed ? timestep.cfl * dx : rule_dt(ρ, u, φ, dx, scheme; wall)
+        dt = timestep.mode == :fixed ? timestep.cfl * dx : rule_dt(ρ, u, φ, dx, scheme; bc)
         dt = min(dt, timestep.dtmax * dx)
         if timestep.mode == :cfl && dt < 1e-4 * dx
             status = :collapse
@@ -80,7 +81,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         local ρ1, u1, φ1, r
         retried = false
         for _ in 1:maxretry
-            ρ1, u1, φ1, r = attempt(ρ, u, φ, dt, dx, λ, scheme; wall)
+            ρ1, u1, φ1, r = attempt(ρ, u, φ, dt, dx, λ, scheme; bc)
             (timestep.mode == :fixed || r <= 1) && break
             dt /= r
             retried = true

@@ -52,7 +52,7 @@ end
 function solution_columns(case, grid, t, ρ, u, φ)
     x = grid.x
     ρ0, u0 = case.init(x)
-    φ0 = initial_potential(ρ0, case.lambda, grid.dx; wall = grid.bc == :wall)
+    φ0 = initial_potential(ρ0, case.lambda, grid.dx; bc = grid.bc)
     names = ["x", "rho", "u", "phi", "rho_init", "u_init", "phi_init"]
     cols = Any[x, ρ, u, φ, ρ0, u0, φ0]
     if case.exact !== nothing

@@ -1,0 +1,22 @@
+# Parameters of the test case `sevenbranch`: seven-branch test of Degond et al. §5.3 (ρ = e^{-(x-π)²}/π, u = sin 2x cos x). See SPEC §7.
+case = "sevenbranch"  # initial data of this case (no exact solution)
+domain = [0.0, 6.283185307179586]  # [a, b] = [0, 2π]
+bc = "extrapolate"   # as EulerAP.jl: ρ, u extrapolated (ghost = copy), φ periodic
+N = 2000             # number of cells; Degond et al. use 2000 (reference: finer grid)
+lambda = 1.0         # scale parameter λ of the Poisson equation; Degond et al. use 1 and 1e-2
+T = 1.0              # final time
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "dissipation" # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4)
+theta = 0.5          # "dissipation" only: θ of Corollary 3.17
+kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
+kappa_s = 0.0
+# limiter = "minmod" # "second" only: "minmod" or "none" (central slopes)
+# c_D = 1.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
+# cfl = 0.4          # "second" only: cfl of (91)
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = inf          # upper bound on Δt/Δx
