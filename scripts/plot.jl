@@ -7,6 +7,8 @@
 # Several files are drawn in the same panels: metadata shared by all files becomes the title, metadata
 # that differs (scheme, N, λ, t, ...) labels each curve. Initial data are drawn once per case, exact
 # solutions once per case and time. Default output: the first file with .png (`_compare.png` for several).
+# History files of several λ get one more panel: ap_residual at the final time against λ (log–log), one
+# curve per remaining difference (scheme, N, ...), with a dashed reference slope 2 (‖e^φ - ρ‖∞ ∝ λ²).
 using Plots
 
 function read_data(path)
@@ -64,11 +66,30 @@ function plot_files(paths; out = replace(paths[1], r"\.csv$" => length(paths) ==
         hi - lo < 1e-9w && ylims!(p, (lo - 1e-6w, hi + 1e-6w))   # constant up to round-off (e.g. mass)
         p
     end
+    "lambda" in differ && names1[1] == "t" && "ap_residual" in cols && push!(panels, ap_panel(files, differ))
     title = tag(files[1][1], common)
     nc = min(length(panels), 3); nr = cld(length(panels), nc)   # near-square panels, at most 3 per row
     fig = plot(panels...; layout = (nr, nc), size = (420nc, 400nr + 30), plot_title = title, plot_titlefontsize = 10, margin = 4Plots.mm, left_margin = 10Plots.mm, bottom_margin = 8Plots.mm)
     savefig(fig, out)
     println("wrote ", out)
+end
+
+# ap_residual(T) against λ, one curve per value of the other differing keys, and slope 2 through the
+# smallest λ of the first curve.
+function ap_panel(files, differ)
+    others = filter(k -> !(k in ("lambda", "t")), differ)
+    p = plot(; xscale = :log10, yscale = :log10, xlabel = "λ", ylabel = "ap_residual at final time", legend = :topleft)
+    groups = unique(tag(m, others) for (m, _, _) in files)
+    ref = nothing
+    for (k, g) in enumerate(groups)
+        pts = sort([(parse(Float64, m["lambda"]), data[end, findfirst(==("ap_residual"), names)])
+                    for (m, names, data) in files if tag(m, others) == g])
+        plot!(p, first.(pts), last.(pts); marker = :circle, lw = 1.5, color = k, label = isempty(others) ? "numerical" : g)
+        ref === nothing && (ref = (first.(pts), pts[1]))
+    end
+    λs, (λ0, r0) = ref
+    plot!(p, λs, r0 .* (λs ./ λ0) .^ 2; ls = :dash, color = :black, lw = 1, label = "slope 2")
+    return p
 end
 
 const FLAGS = ("--no-init", "--no-exact")
