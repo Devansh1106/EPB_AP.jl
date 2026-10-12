@@ -128,7 +128,7 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 * Soliton: $u = c - \sqrt{c^2-2\phi}$, $\rho = c/\sqrt{c^2-2\phi}$, $\lambda^2(\phi')^2 = 2V(\phi)$,
   $V = e^\phi - 1 + c\big(\sqrt{c^2-2\phi} - c\big)$; $\phi_{max}$ from $V(\phi_{max}) = 0$. Computed by integrating
   $\lambda^2\phi'' = e^\phi - \rho(\phi)$ from $(\phi_{max}, 0)$ with RK4 ($h = 10^{-3}$) and Hermite interpolation;
-  the exact solution at $t$ is the profile at $\xi = x - 20 - ct$ (periodic).
+  the exact solution at $t$ is the profile at $\xi = x - 25 - ct$ (periodic; the peak starts at the centre $(b-a)/2$).
 * Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
 * smooth: the at-rest dip of EulerAP.jl moved with the uniform drift $U$ (Galilean invariance on the periodic domain), so
   $u > 0$ everywhere: (44) gives $\Delta t \propto \Delta x$ (from rest, (90): $\propto \sqrt{\Delta x}$) and there is no stagnation point.
