@@ -24,7 +24,7 @@ run_case(:smooth; scheme = SecondOrder())            # second order (limiter = :
 ```
 In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of the other order (`theta`, `kappa_*`
 or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change.
-Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed`.
+Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch`.
 
 ## Parameters
 

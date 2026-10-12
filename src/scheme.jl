@@ -21,9 +21,9 @@ Base.@kwdef struct Scheme
 end
 
 "Local edge coefficient η_e: (43) for `:shift`, Corollary 3.17(i) for `:dissipation`."
-function eta_coefficient(ρ, sch::Scheme)
+function eta_coefficient(ρ, sch::Scheme; bc = :periodic)
     c = sch.kind == :shift ? 5 / 4 : 1 / (2 * (1 - sch.theta))
-    return c .* edgemap(logmean, ρ) .^ 2 ./ edgemap(harmonic, ρ)
+    return c .* edgemap(logmean, ρ; bc) .^ 2 ./ edgemap(harmonic, ρ; bc)
 end
 
 "Constant density-dissipation coefficient κⁿ (Remark 3.23); zero for `:shift`."
@@ -40,17 +40,22 @@ function gradient_matrix(N, dx; wall = false)
     return sparse(I, J, V, N, N)
 end
 
+# Divergence of an :extrapolate edge array (N + 1 edges, the last one the left face of cell 1).
+divergence_matrix(N, dx) = sparse([1:N; 1:N], [1:N; N + 1; 1:N-1], [fill(1 / dx, N); fill(-1 / dx, N)], N, N + 1)
+
 """
-    solve_potential(φ, rhs, μ, κ, λ, dt, dx; wall = false)
+    solve_potential(φ, rhs, μ, κ, λ, dt, dx; bc = :periodic)
 
 Newton's method for (52): `e^φ - λ² ΔM φ - Δt divM(μ ∂E φ) + κ λ² Δt ΔM² φ = rhs`, starting from `φ`.
-The Jacobian is the SPD matrix of Remark 3.22, periodic corners included (none with walls).
+The Jacobian is the SPD matrix of Remark 3.22, periodic corners included (none with walls); with
+`:extrapolate`, μ has N + 1 edges and the matrix is not symmetric.
 """
-function solve_potential(φ, rhs, μ, κ, λ, dt, dx; wall = false, tol = 1e-12, maxit = 50)
+function solve_potential(φ, rhs, μ, κ, λ, dt, dx; bc = :periodic, tol = 1e-12, maxit = 50)
     N = length(φ)
-    D = gradient_matrix(N, dx; wall)
+    D = gradient_matrix(N, dx; wall = bc == :wall)
     L = D' * D
-    A = λ^2 * L + dt * (D' * spdiagm(0 => μ) * D)
+    A = λ^2 * L + dt * (length(μ) == N ? D' * spdiagm(0 => μ) * D :
+                        -divergence_matrix(N, dx) * spdiagm(0 => μ) * [D; D[N:N, :]])
     κ > 0 && (A += κ * λ^2 * dt * (L * L))
     φ = copy(φ)
     for _ in 1:maxit
@@ -68,67 +73,68 @@ function solve_potential(φ, rhs, μ, κ, λ, dt, dx; wall = false, tol = 1e-12,
 end
 
 "Initial potential from ρ by (29)."
-initial_potential(ρ, λ, dx; wall = false) =
-    solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, λ, 0.0, dx; wall)
+initial_potential(ρ, λ, dx; bc = :periodic) =
+    solve_potential(log.(ρ), ρ, zeros(length(ρ)), 0.0, λ, 0.0, dx; bc)
 
 """
-    step(ρ, u, φ, dt, dx, λ, η, κ; wall = false)
+    step(ρ, u, φ, dt, dx, λ, η, κ; bc = :periodic)
 
 One step of (27)–(29) with the given edge coefficients η and constant κ (κ = 0 gives §3.3);
-with `wall`, F = G = 0 and ∂E φ = 0 on the walls.
+with walls, F = G = 0 and ∂E φ = 0 on the walls; with `:extrapolate`, fluxes to ghost copies (grid.jl).
 Returns `(ρ, u, φ, F)` at level n + 1, F being the mass flux used.
 """
-function step(ρ, u, φ, dt, dx, λ, η, κ; wall = false)
-    N = length(ρ)
-    ρbar = edgemap(logmean, ρ)                      # (17)
-    conv = ρbar .* avg(u)                           # ρ̄ {u}
+function step(ρ, u, φ, dt, dx, λ, η, κ; bc = :periodic)
+    N, wall = length(ρ), bc == :wall
+    ρbar = edgemap(logmean, ρ; bc)                  # (17)
+    conv = ρbar .* avg(u; bc)                       # ρ̄ {u}
     wall && (conv[end] = 0)
     μ = η .* dt
-    κ > 0 && (μ = μ .+ κ .* edgemap(logmean, exp.(φ)))   # μ of (52), linearised ρ̂ⁿ
-    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx), μ, κ, λ, dt, dx; wall)
-    dφ = grad(φ1, dx; wall)
+    κ > 0 && (μ = μ .+ κ .* widen(edgemap(logmean, exp.(φ)), bc))   # μ of (52), linearised ρ̂ⁿ
+    φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx, N), μ, κ, λ, dt, dx; bc)
+    dφ = dphi(φ1, dx, bc)
     Q = μ .* dφ
-    κ > 0 && (Q = Q .- κ * λ^2 .* grad(lap(φ1, dx; wall), dx; wall))  # (46)
+    κ > 0 && (Q = Q .- κ * λ^2 .* widen(grad(lap(φ1, dx; wall), dx; wall), bc))  # (46)
     F = conv .- Q                                   # (18)
-    ρ1 = ρ .- dt .* divm(F, dx)                     # (27)
-    G = [F[e] >= 0 ? u[e] * F[e] : u[right(e, N)] * F[e] for e in 1:N]   # (19)
-    S = source(ρbar, dφ)                            # (15)
-    m1 = ρ .* u .- dt .* divm(G, dx) .+ dt .* S     # (28)
+    ρ1 = ρ .- dt .* divm(F, dx, N)                  # (27)
+    uL, uR = edgestates(u; bc)
+    G = ifelse.(F .>= 0, uL, uR) .* F               # (19)
+    S = source(ρbar, dφ, N)                         # (15)
+    m1 = ρ .* u .- dt .* divm(G, dx, N) .+ dt .* S  # (28)
     return ρ1, m1 ./ ρ1, φ1, F
 end
 
-"Source (15): `S_i = -(ρ̄ ∂E φ)_{i+1/2}/2 - (ρ̄ ∂E φ)_{i-1/2}/2`, from edge values ρ̄ and ∂E φ."
-source(ρbar, dφ) = (a = ρbar .* dφ; [-(a[i] + a[left(i, length(a))]) / 2 for i in eachindex(a)])
+"Source (15): `S_i = -(ρ̄ ∂E φ)_{i+1/2}/2 - (ρ̄ ∂E φ)_{i-1/2}/2` on `N` cells, from edge values ρ̄ and ∂E φ."
+source(ρbar, dφ, N = length(ρbar)) = (a = ρbar .* dφ; [-(a[i] + lefte(a, i)) / 2 for i in 1:N])
 
-# Outward flux of cell i through edge e = i (right) and e = i-1 (left), convention (13).
-outward(F, i) = (F[i], -F[left(i, length(F))])
+# Outward flux of cell i through its right and left edges, convention (13).
+outward(F, i) = (F[i], -lefte(F, i))
 
 """
-    stable_dt(ρ, u, φ, dx, η, κ, sch; wall = false)
+    stable_dt(ρ, u, φ, dx, η, κ, sch; bc = :periodic)
 
 Time step from (44) (`:shift`, with C_i = Δx Σ η|∂E φⁿ|) or Remark 3.22 times 0.9 (`:dissipation`);
 no other bound (SPEC §5).
 """
-function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme; wall = false)
-    N = length(ρ)
-    d = η .* abs.(grad(φ, dx; wall))
+function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme; bc = :periodic)
+    N, wall = length(ρ), bc == :wall
+    d = η .* abs.(dphi(φ, dx, bc))
     X = Inf
     if sch.kind == :shift
-        a = abs.(edgemap(logmean, ρ) .* avg(u))
+        a = abs.(edgemap(logmean, ρ; bc) .* avg(u; bc))
         wall && (a[end] = 0)
         for i in 1:N
-            A = a[i] + a[left(i, N)]
-            C = dx * (d[i] + d[left(i, N)])
+            A = a[i] + lefte(a, i)
+            C = dx * (d[i] + lefte(d, i))
             X = min(X, 0.4ρ[i] / (A + sqrt(A^2 + 0.8C * ρ[i])))
         end
         return X * dx
     end
     θ = sch.theta
-    c = edgemap(logmean, ρ) .* avg(u) .- κ .* grad(ρ, dx; wall)
+    c = edgemap(logmean, ρ; bc) .* avg(u; bc) .- κ .* drho(ρ, dx, bc)
     wall && (c[end] = 0)
     for i in 1:N
         A = sum(max.(outward(c, i), 0))
-        C = dx * (d[i] + d[left(i, N)])
+        C = dx * (d[i] + lefte(d, i))
         X = min(X, 2θ * ρ[i] / (A + sqrt(A^2 + 4θ * C * ρ[i])))
     end
     return 0.9X * dx

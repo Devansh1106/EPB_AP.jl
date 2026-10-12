@@ -57,6 +57,29 @@ end
     end
 end
 
+@testset "extrapolation (EulerAP.jl ExtrapolateBC): ghost copies beyond both ends, φ periodic" begin
+    N, dx = 20, 0.05
+    ρ, u = collect(range(1, 2; length = N)), collect(range(0.1, 0.5; length = N))
+    _, _, _, F = EPB_AP.step(ρ, u, zeros(N), 1e-3, dx, 1.0, zeros(N + 1), 0.0; bc = :extrapolate)
+    @test length(F) == N + 1 && F[N] ≈ ρ[N] * u[N] && F[N+1] ≈ ρ[1] * u[1]   # η = 0: F = ρ̄ {u}
+    _, _, F, f = EPB_AP.semidiscrete_rhs(ρ, ρ .* u, zeros(N), dx, SecondOrder(); bc = :extrapolate)
+    @test F[N] ≈ ρ[N] * u[N] && F[N+1] ≈ ρ[1] * u[1] && f.D[N] == f.D[N+1] == 0
+    g = Grid(0, 1, N; bc = :extrapolate)     # a uniform flow leaves through one end as it enters the other
+    for s in (Scheme(), Scheme(kind = :dissipation), SecondOrder())
+        r = solve(fill(1.0, N), fill(0.5, N), g, 1.0, 0.1; scheme = s)
+        @test r.status == :completed && maximum(abs, r.rho .- 1) < 1e-12 && maximum(abs, r.u .- 0.5) < 1e-12
+    end
+end
+
+@testset "five- and seven-branch tests (Degond et al. §5.3): the dissipation scheme completes" begin
+    for name in (:fivebranch, :sevenbranch), lambda in (1.0, 1e-2)
+        r = solve(testcase(name; lambda, N = 200))
+        @test r.status == :completed && r.t == 1.0 && all(r.history.min_rho .> 0)
+    end
+    @test testcase(:fivebranch).bc == :extrapolate
+    @test solve(testcase(:sevenbranch; N = 200, scheme = Scheme())).status == :collapse
+end
+
 @testset "Riemann problem with walls [1, §7.4]: shock position and middle state" begin
     c = testcase(:riemann)
     @test c.bc == :wall && c.N == 400 && c.T == 50
@@ -88,12 +111,12 @@ end
 end
 
 @testset "second order on every case: mass, positivity, AP, order" begin
-    for name in EPB_AP.CASES
+    for name in filter(!=(:sevenbranch), EPB_AP.CASES)   # sevenbranch: second order collapses at t ≈ 0.53 (SPEC §7)
         c = testcase(name; scheme = SecondOrder())
         r = solve(testcase(name; scheme = SecondOrder(), T = min(c.T, 0.1 * (c.domain[2] - c.domain[1]))))
         h = r.history
         @test r.status == :completed
-        @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]
+        c.bc == :extrapolate || @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]   # mass leaves
         @test all(h.min_rho .> 0)
     end
     r = [solve(testcase(:ap; lambda, T = 0.1, scheme = SecondOrder())).history.ap_residual[end]

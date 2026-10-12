@@ -2,7 +2,7 @@
     Grid(a, b, N; bc = :periodic)
 
 Uniform grid of `N` cells on `[a, b]` with centres `x[i] = a + (i - 1/2) dx` (6).
-`bc = :periodic` or `:wall` (walls at a and b, SPEC §7).
+`bc = :periodic`, `:wall` (walls at a and b) or `:extrapolate` (ρ, u extrapolated, φ periodic), SPEC §7.
 """
 struct Grid
     a::Float64
@@ -14,14 +14,20 @@ struct Grid
 end
 
 function Grid(a, b, N::Integer; bc = :periodic)
-    bc in (:periodic, :wall) || throw(ArgumentError("bc must be :periodic or :wall"))
+    bc in (:periodic, :wall, :extrapolate) || throw(ArgumentError("bc must be :periodic, :wall or :extrapolate"))
     dx = (b - a) / N
     return Grid(a, b, N, dx, [a + (i - 0.5) * dx for i in 1:N], bc)
 end
 
 # Discrete operators (8). Edge e = i + 1/2 is stored at index i. With walls, the edge stored at
 # index N stands for both walls (1/2 and N + 1/2): every edge quantity there is zero (no flux,
-# ∂E φ = 0), so divM at cells 1 and N sees the wall.
+# ∂E φ = 0), so divM at cells 1 and N sees the wall. With :extrapolate, edge arrays of the fluxes have
+# N + 1 entries: edge N is the right face of cell N and edge N + 1 the left face of cell 1, each between
+# the cell and its ghost copy, while φ stays periodic (its edge gradient at N + 1 repeats that at N).
+# The left edge of cell 1 is always the last entry.
+
+"Value of the edge array `v` at the left edge of cell `i`."
+@inline lefte(v, i) = v[i == 1 ? lastindex(v) : i - 1]
 
 "Edge gradient `(∂E q)_{i+1/2} = (q_{i+1} - q_i)/dx`; zero at the walls if `wall`."
 function grad(q, dx; wall = false)
@@ -30,17 +36,38 @@ function grad(q, dx; wall = false)
     return g
 end
 
-"Cell divergence `(divM v)_i = (v_{i+1/2} - v_{i-1/2})/dx`."
-divm(v, dx) = [(v[i] - v[left(i, length(v))]) / dx for i in eachindex(v)]
+"Cell divergence `(divM v)_i = (v_{i+1/2} - v_{i-1/2})/dx` on `N` cells."
+divm(v, dx, N = length(v)) = [(v[i] - lefte(v, i)) / dx for i in 1:N]
 
 "Compact Laplacian `ΔM = divM ∘ ∂E` (homogeneous Neumann at the walls if `wall`)."
 lap(q, dx; wall = false) = divm(grad(q, dx; wall), dx)
 
+"""
+    edgestates(r, l = r; bc = :periodic)
+
+States on the two sides of every edge, from the values `r` (`l`) that each cell gives its right (left)
+face; with `:extrapolate` the ghost beyond a boundary face repeats the cell inside.
+"""
+function edgestates(r, l = r; bc = :periodic)
+    N = length(r)
+    bc == :extrapolate || return r, l[right.(1:N, N)]
+    return [r; l[1]], [l[2:N]; r[N]; l[1]]
+end
+
 "Edge function from a cell function via `f(q_i, q_{i+1})`."
-edgemap(f, q) = [f(q[i], q[right(i, length(q))]) for i in eachindex(q)]
+edgemap(f, q; bc = :periodic) = f.(edgestates(q; bc)...)
 
 "Arithmetic edge average `{u}_e` (12)."
-avg(u) = edgemap((a, b) -> (a + b) / 2, u)
+avg(u; bc = :periodic) = edgemap((a, b) -> (a + b) / 2, u; bc)
+
+"Edge array of a periodic quantity in the layout of `bc` (edge N repeated with `:extrapolate`)."
+widen(g, bc) = bc == :extrapolate ? [g; g[end]] : g
+
+"Edge gradient of φ for the fluxes: periodic with `:extrapolate`, Neumann with walls."
+dphi(φ, dx, bc) = widen(grad(φ, dx; wall = bc == :wall), bc)
+
+"Edge gradient of a hyperbolic variable: through the ghosts with `:extrapolate` (zero at the boundary faces)."
+drho(ρ, dx, bc) = bc == :extrapolate ? edgemap((a, b) -> (b - a) / dx, ρ; bc) : grad(ρ, dx; wall = bc == :wall)
 
 """
     logmean(a, b)

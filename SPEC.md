@@ -13,7 +13,7 @@ Source: Arun & Ghorai, *A collocated finite volume scheme for the Euler–Poisso
 
 $\lambda$ is the scale parameter (Debye length) of the Poisson equation; the manuscript writes $\varepsilon$, and the code
 keyword is `lambda`. Interval $[a,b]$, $N$ uniform cells, centres $x_i = a + (i-\tfrac12)\Delta x$, all unknowns cell
-centred (6). All problems are periodic except the Riemann problem (walls, §7).
+centred (6). All problems are periodic except the Riemann problem (walls) and the branch tests (extrapolation), §7.
 
 ## 2. Discrete framework (§2)
 
@@ -107,6 +107,15 @@ $(\partial_E\phi) = 0$ (so also $Q = 0$ and no source contribution there); with 
 $\rho$ enters no flux. Mass and the energy identity are kept. Up to $T = 50$ no wave reaches a wall (rarefaction head
 at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponentially small tails.
 
+The five- and seven-branch tests use the boundary conditions of EulerAP.jl (`bc = "extrapolate"`): `ExtrapolateBC` for
+$(\rho, u)$, a ghost cell copying the cell inside, and periodic $\phi$. Degond et al. only say "fictitious states" and
+impose $\phi$ by Dirichlet data, so their conditions are not reproduced exactly. Discretely, edge arrays of the fluxes have $N + 1$
+entries: edge $N$ is the right face of cell $N$ and edge $N+1$ the left face of cell 1, each between the cell and its
+ghost copy ($\bar\rho = \rho_i$, $\lbrace u\rbrace = u_i$, $\partial_E\rho = 0$; second order: zero one-sided
+difference towards the ghost in (54), mirrored ghost slope), while $\partial_E\phi$ there is the periodic
+$(\phi_1 - \phi_N)/\Delta x$. The potential equation (52), (88) is then not symmetric. Mass leaves through the ends
+and the energy identity does not hold.
+
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
 | smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
@@ -120,16 +129,24 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 | simple wave (§5.6) | $[0,1]$ | $e^{u^0}$, $0.2\sin 2\pi x$ | 1e-4 | 0.3 | 100…1600 | rule, $\le 0.4\Delta x$ | exact (characteristics) |
 | riemann ([1, §7.4]) | $[-80,100]$, walls | 1 for $x<0$, $n_r$ for $x \ge 0$; $u=0$; $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$ | 1e-4 | 50 | 400 (9000 in [1]) | (44) | ICE solution [1, (7.8)–(7.10)] |
 | riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
+| fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
+| sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
 * Soliton: $u = c - \sqrt{c^2-2\phi}$, $\rho = c/\sqrt{c^2-2\phi}$, $\lambda^2(\phi')^2 = 2V(\phi)$,
   $V = e^\phi - 1 + c\big(\sqrt{c^2-2\phi} - c\big)$; $\phi_{max}$ from $V(\phi_{max}) = 0$. Computed by integrating
   $\lambda^2\phi'' = e^\phi - \rho(\phi)$ from $(\phi_{max}, 0)$ with RK4 ($h = 10^{-3}$) and Hermite interpolation;
-  the exact solution at $t$ is the profile at $\xi = x - 20 - ct$ (periodic).
+  the exact solution at $t$ is the profile at $\xi = x - 25 - ct$ (periodic; the peak starts at the centre $(b-a)/2$).
 * Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
 * smooth: the at-rest dip of EulerAP.jl moved with the uniform drift $U$ (Galilean invariance on the periodic domain), so
   $u > 0$ everywhere: (44) gives $\Delta t \propto \Delta x$ (from rest, (90): $\propto \sqrt{\Delta x}$) and there is no stagnation point.
+* fivebranch, sevenbranch: $\rho^0 \ge e^{-\pi^2}/\pi \approx 1.6\cdot10^{-5}$ at the ends. With the default `dissipation`
+  they complete to $T = 1$ at $\lambda = 1$ and 1e-2 ($N = 200, 2000$); `shift` and `second` collapse at $\lambda = 1$
+  (except fivebranch, shift, $N = 200$), and on sevenbranch at $\lambda = $ 1e-2, $N = 2000$. At $\lambda = 1$ the density
+  stays inside (mass loss $\le 10^{-6}$, as periodic to $4\cdot10^{-6}$) and sevenbranch concentrates (max $\rho \approx 46$
+  at $T = 1$, $N = 2000$), the singularity of the dispersive regime; at $\lambda = $ 1e-2 it spreads to the ends and
+  0.15% (fivebranch) and 1.1% (sevenbranch) of the mass leaves by $T = 1$.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
   Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,
