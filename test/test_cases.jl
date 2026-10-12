@@ -85,6 +85,14 @@ end
     @test data[:, 5:6] == hcat(testcase(:riemann).init(r.grid.x)...)
     meta, names, data = read_csv(paths[3])
     @test names[1:3] == ["t", "dt", "energy"] && size(data, 1) == r.steps + 1
+    # a run that stops before T warns, and every path is printed
+    file = joinpath(dir, "out.txt")
+    p = open(file, "w") do io
+        redirect_stdout(io) do
+            @test_logs (:warn, r"collapse at t = .* < T = 1.0") run_case(:step; dir, lambda = 0.1, N = 800, scheme = Scheme())
+        end
+    end
+    @test readlines(file) == ["wrote " * q for q in p]
 end
 
 @testset "second order on every case: mass, positivity, AP, order" begin

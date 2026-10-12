@@ -68,8 +68,9 @@ end
 Solve a test case, given by name (`params/<name>.toml`) or by parameter file, with keywords as in
 [`testcase`](@ref), and write CSV files to `dir`:
 the solution at the final time and one file per snapshot (each with the initial data and, if known,
-the exact solution), and the per-step history. Returns the file paths; `solve(testcase(...))` gives the
-[`Result`](@ref) itself.
+the exact solution), and the per-step history. Prints the paths, and warns if the run stopped before T
+(the files then hold the state at the time reached, `# t` in their header, while their names keep T).
+Returns the file paths; `solve(testcase(...))` gives the [`Result`](@ref) itself.
 """
 function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     case = testcase(src; kw...)
@@ -85,5 +86,9 @@ function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
                            solution_columns(case, res.grid, res.t, res.rho, res.u, res.phi)...))
     h = res.history
     push!(paths, write_csv("$(base)_history.csv", meta, collect(String.(keys(h))), collect(values(h))))
+    res.status == :completed ||
+        @warn "$(case.name), $(scheme_name(case.scheme)), N = $(case.N), λ = $(case.lambda): $(res.status) at " *
+              "t = $(res.t) < T = $(case.T) after $(res.steps) steps; the files hold the state at t = $(res.t)"
+    foreach(p -> println("wrote ", p), paths)
     return paths
 end
