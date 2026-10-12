@@ -45,9 +45,9 @@ end
 @testset "walls: no slope in the end cells, no flux through the walls" begin
     N, dx = 20, 0.05
     ρ, u = collect(range(1, 2; length = N)), collect(range(0.1, 0.5; length = N))
-    _, _, σ = reconstruct(ρ, dx, :minmod; wall = true)
+    _, _, σ = reconstruct(ρ, dx, :minmod; bc = :wall)
     @test σ[1] == σ[N] == 0
-    ρ̇, q̇, F, f = semidiscrete_rhs(ρ, ρ .* u, zeros(N), dx, SecondOrder(); wall = true)
+    ρ̇, q̇, F, f = semidiscrete_rhs(ρ, ρ .* u, zeros(N), dx, SecondOrder(); bc = :wall)
     @test F[end] == 0 && f.D[end] == 0
     @test abs(sum(ρ̇)) < 1e-12
 end

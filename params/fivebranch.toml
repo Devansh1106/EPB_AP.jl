@@ -1,7 +1,7 @@
 # Parameters of the test case `fivebranch`: five-branch test of Degond et al. §5.3 (ρ = e^{-(x-π)²}/π, u = sin³x). See SPEC §7.
 case = "fivebranch"  # initial data of this case (no exact solution)
 domain = [0.0, 6.283185307179586]  # [a, b] = [0, 2π]
-bc = "periodic"      # "periodic" or "wall"
+bc = "extrapolate"   # as EulerAP.jl: ρ, u extrapolated (ghost = copy), φ periodic
 N = 2000             # number of cells; Degond et al. use 2000 (reference: finer grid)
 lambda = 1.0         # scale parameter λ of the Poisson equation; Degond et al. use 1 and 1e-2
 T = 1.0              # final time
