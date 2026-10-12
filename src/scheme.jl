@@ -48,11 +48,11 @@ divergence_matrix(N, dx) = sparse([1:N; 1:N], [1:N; N + 1; 1:N-1], [fill(1 / dx,
 
 Newton's method for (52): `e^φ - λ² ΔM φ - Δt divM(μ ∂E φ) + κ λ² Δt ΔM² φ = rhs`, starting from `φ`.
 The Jacobian is the SPD matrix of Remark 3.22, periodic corners included (none with walls); with
-`:extrapolate`, μ has N + 1 edges and the matrix is not symmetric.
+`:extrapolate` or `:neumann`, μ has N + 1 edges and the matrix is not symmetric.
 """
 function solve_potential(φ, rhs, μ, κ, λ, dt, dx; bc = :periodic, tol = 1e-12, maxit = 50)
     N = length(φ)
-    D = gradient_matrix(N, dx; wall = bc == :wall)
+    D = gradient_matrix(N, dx; wall = neumann_phi(bc))
     L = D' * D
     A = λ^2 * L + dt * (length(μ) == N ? D' * spdiagm(0 => μ) * D :
                         -divergence_matrix(N, dx) * spdiagm(0 => μ) * [D; D[N:N, :]])
@@ -80,23 +80,23 @@ initial_potential(ρ, λ, dx; bc = :periodic) =
     step(ρ, u, φ, dt, dx, λ, η, κ; bc = :periodic)
 
 One step of (27)–(29) with the given edge coefficients η and constant κ (κ = 0 gives §3.3);
-with walls, F = G = 0 and ∂E φ = 0 on the walls; with `:extrapolate`, fluxes to ghost copies (grid.jl).
+with walls, F = G = 0 and ∂E φ = 0 on the walls; with `:extrapolate`, `:neumann`, fluxes to ghost cells (grid.jl).
 Returns `(ρ, u, φ, F)` at level n + 1, F being the mass flux used.
 """
 function step(ρ, u, φ, dt, dx, λ, η, κ; bc = :periodic)
-    N, wall = length(ρ), bc == :wall
+    N, wall, vg = length(ρ), bc == :wall, vghost(bc)
     ρbar = edgemap(logmean, ρ; bc)                  # (17)
-    conv = ρbar .* avg(u; bc)                       # ρ̄ {u}
+    conv = ρbar .* avg(u; bc, ghost = vg)           # ρ̄ {u}
     wall && (conv[end] = 0)
     μ = η .* dt
     κ > 0 && (μ = μ .+ κ .* widen(edgemap(logmean, exp.(φ)), bc))   # μ of (52), linearised ρ̂ⁿ
     φ1 = solve_potential(φ, ρ .- dt .* divm(conv, dx, N), μ, κ, λ, dt, dx; bc)
     dφ = dphi(φ1, dx, bc)
     Q = μ .* dφ
-    κ > 0 && (Q = Q .- κ * λ^2 .* widen(grad(lap(φ1, dx; wall), dx; wall), bc))  # (46)
+    κ > 0 && (Q = Q .- κ * λ^2 .* widen(grad(lap(φ1, dx; wall = neumann_phi(bc)), dx; wall = neumann_phi(bc)), bc))  # (46)
     F = conv .- Q                                   # (18)
     ρ1 = ρ .- dt .* divm(F, dx, N)                  # (27)
-    uL, uR = edgestates(u; bc)
+    uL, uR = edgestates(u; bc, ghost = vg)
     G = ifelse.(F .>= 0, uL, uR) .* F               # (19)
     S = source(ρbar, dφ, N)                         # (15)
     m1 = ρ .* u .- dt .* divm(G, dx, N) .+ dt .* S  # (28)
@@ -120,7 +120,7 @@ function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme; bc = :periodic)
     d = η .* abs.(dphi(φ, dx, bc))
     X = Inf
     if sch.kind == :shift
-        a = abs.(edgemap(logmean, ρ; bc) .* avg(u; bc))
+        a = abs.(edgemap(logmean, ρ; bc) .* avg(u; bc, ghost = vghost(bc)))
         wall && (a[end] = 0)
         for i in 1:N
             A = a[i] + lefte(a, i)
@@ -130,7 +130,7 @@ function stable_dt(ρ, u, φ, dx, η, κ, sch::Scheme; bc = :periodic)
         return X * dx
     end
     θ = sch.theta
-    c = edgemap(logmean, ρ; bc) .* avg(u; bc) .- κ .* drho(ρ, dx, bc)
+    c = edgemap(logmean, ρ; bc) .* avg(u; bc, ghost = vghost(bc)) .- κ .* drho(ρ, dx, bc)
     wall && (c[end] = 0)
     for i in 1:N
         A = sum(max.(outward(c, i), 0))

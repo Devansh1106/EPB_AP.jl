@@ -21,7 +21,7 @@ Base.@kwdef struct TestCase
 end
 
 const CASES = (:smooth, :steep, :nearvacuum, :bump, :step, :expansion, :soliton, :ap, :simplewave,
-               :riemann, :riemann_speed, :fivebranch, :sevenbranch)
+               :riemann, :riemann_speed, :fivebranch, :sevenbranch, :plasmaexpansion)
 
 "Directory of the parameter files `<case>.toml`, one per entry of `CASES`."
 const PARAMS = joinpath(dirname(@__DIR__), "params")
@@ -48,6 +48,7 @@ function problem(name::Symbol, domain, λ, p)
     branch = x -> exp.(-(x .- π) .^ 2) ./ π               # Degond et al. §5.3, after Liu & Wang
     name == :fivebranch && return (init = x -> (branch(x), sin.(x) .^ 3),)
     name == :sevenbranch && return (init = x -> (branch(x), sin.(2x) .* cos.(x)),)
+    name == :plasmaexpansion && return (init = x -> (0.5 .- atan.(π .* x) ./ π, zero(x)),)   # [1, (7.6)]
     throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
 end
 

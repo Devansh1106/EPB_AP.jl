@@ -24,11 +24,11 @@ scheme_name(::SecondOrder) = :second
 "Minmod of two slopes (§4.1)."
 minmod(a, b) = a * b <= 0 ? zero(a) : (abs(a) < abs(b) ? a : b)
 
-"Cell slopes σ of (54); zero in cells 1 and N with walls, ghost copies beyond them with `:extrapolate`."
-function slopes(w, dx, limiter; bc = :periodic)
-    N, ext = length(w), bc == :extrapolate
+"Cell slopes σ of (54); zero in cells 1 and N with walls; with ghosts, ghost copies beyond them (left: `ghost` if given)."
+function slopes(w, dx, limiter; bc = :periodic, ghost = nothing)
+    N, ext = length(w), ghosted(bc)
     σ = map(1:N) do i
-        l = ext && i == 1 ? 0.0 : w[i] - w[left(i, N)]
+        l = ext && i == 1 ? (ghost === nothing ? 0.0 : w[1] - ghost) : w[i] - w[left(i, N)]
         r = ext && i == N ? 0.0 : w[right(i, N)] - w[i]
         limiter == :minmod ? minmod(l, r) / dx : (l + r) / 2dx
     end
@@ -36,10 +36,10 @@ function slopes(w, dx, limiter; bc = :periodic)
     return σ
 end
 
-"Edge states `(w⁻, w⁺)` of (55) at e = i + 1/2 (index i), and the slopes; mirrored ghosts with `:extrapolate`."
-function reconstruct(w, dx, limiter; bc = :periodic)
-    σ = slopes(w, dx, limiter; bc)
-    wm, wp = edgestates(w .+ dx / 2 .* σ, w .- dx / 2 .* σ; bc)
+"Edge states `(w⁻, w⁺)` of (55) at e = i + 1/2 (index i), and the slopes; mirrored ghosts (left: `ghost` if given)."
+function reconstruct(w, dx, limiter; bc = :periodic, ghost = nothing)
+    σ = slopes(w, dx, limiter; bc, ghost)
+    wm, wp = edgestates(w .+ dx / 2 .* σ, w .- dx / 2 .* σ; bc, ghost)
     return wm, wp, σ
 end
 
@@ -57,9 +57,9 @@ function faces(ρ, q, dx, sch::SecondOrder; bc = :periodic)
     v = q ./ ρ
     ρm, ρp, _ = reconstruct(ρ, dx, sch.limiter; bc)
     min(minimum(ρm), minimum(ρp)) > 0 || throw(NonPositiveDensity())
-    vm, vp, σv = reconstruct(v, dx, sch.limiter; bc)
+    vm, vp, σv = reconstruct(v, dx, sch.limiter; bc, ghost = vghost(bc))
     ρbar = logmean.(ρm, ρp)
-    E = ρbar .* avg(v; bc)
+    E = ρbar .* avg(v; bc, ghost = vghost(bc))
     D = sch.c_D * dx^2 .* drho(ρ, dx, bc)
     bc == :wall && (E[end] = 0)
     return (ρbar = ρbar, E = E, D = D, vm = vm, vp = vp, σv = σv, v = v)

@@ -116,6 +116,11 @@ difference towards the ghost in (54), mirrored ghost slope), while $\partial_E\p
 $(\phi_1 - \phi_N)/\Delta x$. The potential equation (52), (88) is then not symmetric. Mass leaves through the ends
 and the energy identity does not hold.
 
+The plasma expansion uses the boundary conditions of [1, §7.3] and EulerAP.jl (`bc = "neumann"`): extrapolation for
+$\rho$ at both ends, $u = 0$ in the left ghost and extrapolated $u$ on the right, homogeneous Neumann for $\phi$. The edges
+are those of `extrapolate`, but the left face has $\lbrace u\rbrace = u_1/2$ (second order: $u$ slope towards the ghost
+$u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) are symmetric. Ions leave through the left face.
+
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
 | smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
@@ -131,6 +136,7 @@ and the energy identity does not hold.
 | riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
 | fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
+| plasmaexpansion ([1, §7.3]) | $[-10,40]$, Neumann | $\tfrac12 - \tfrac1\pi\arctan(\pi x)$, 0 | 1e-2 | 3 | 10000 | scheme rule | ion front ([1, Fig. 7]) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
@@ -147,6 +153,9 @@ and the energy identity does not hold.
   stays inside (mass loss $\le 10^{-6}$, as periodic to $4\cdot10^{-6}$) and sevenbranch concentrates (max $\rho \approx 46$
   at $T = 1$, $N = 2000$), the singularity of the dispersive regime; at $\lambda = $ 1e-2 it spreads to the ends and
   0.15% (fivebranch) and 1.1% (sevenbranch) of the mass leaves by $T = 1$.
+* plasmaexpansion: default `shift` (EulerAP.jl: first order with $\eta$); `dissipation` and `second` also complete. At
+  $N = 10000$ the ion front (max $u$) is at $x \approx 6.6$ with max $u$ = 2.55 (shift), 2.46 (dissipation), 2.59 (second);
+  the peak grows with $N$ (dissipation: 2.20 at $N = 1000$, 2.27 at 2000), as [1] notes. Mass changes by $\approx 8\cdot10^{-5}$.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
   Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,
