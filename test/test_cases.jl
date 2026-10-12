@@ -57,6 +57,17 @@ end
     end
 end
 
+@testset "five- and seven-branch tests (Degond et al. §5.3): the dissipation scheme completes" begin
+    for name in (:fivebranch, :sevenbranch), lambda in (1.0, 1e-2)
+        r = solve(testcase(name; lambda, N = 200))
+        h = r.history
+        @test r.status == :completed && r.t == 1.0
+        @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]
+        @test all(h.min_rho .> 0)
+    end
+    @test solve(testcase(:sevenbranch; N = 200, scheme = Scheme())).status == :collapse
+end
+
 @testset "Riemann problem with walls [1, §7.4]: shock position and middle state" begin
     c = testcase(:riemann)
     @test c.bc == :wall && c.N == 400 && c.T == 50
@@ -88,7 +99,7 @@ end
 end
 
 @testset "second order on every case: mass, positivity, AP, order" begin
-    for name in EPB_AP.CASES
+    for name in filter(!=(:sevenbranch), EPB_AP.CASES)   # sevenbranch: second order collapses at t ≈ 0.53 (SPEC §7)
         c = testcase(name; scheme = SecondOrder())
         r = solve(testcase(name; scheme = SecondOrder(), T = min(c.T, 0.1 * (c.domain[2] - c.domain[1]))))
         h = r.history

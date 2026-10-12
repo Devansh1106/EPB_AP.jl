@@ -120,6 +120,8 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 | simple wave (§5.6) | $[0,1]$ | $e^{u^0}$, $0.2\sin 2\pi x$ | 1e-4 | 0.3 | 100…1600 | rule, $\le 0.4\Delta x$ | exact (characteristics) |
 | riemann ([1, §7.4]) | $[-80,100]$, walls | 1 for $x<0$, $n_r$ for $x \ge 0$; $u=0$; $n_r \in \lbrace 0.5, 0.75, 0.95\rbrace$ | 1e-4 | 50 | 400 (9000 in [1]) | (44) | ICE solution [1, (7.8)–(7.10)] |
 | riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
+| fivebranch (Degond et al. §5.3) | $[0,2\pi]$ | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
+| sevenbranch (Degond et al. §5.3) | $[0,2\pi]$ | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
@@ -130,6 +132,10 @@ at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponential
 * Simple wave: $u(x,t) = u^0(\xi)$, $x = \xi + (u^0(\xi)+1)t$ (Newton in $\xi$), $\rho = e^u$, $\phi = \log\rho$.
 * smooth: the at-rest dip of EulerAP.jl moved with the uniform drift $U$ (Galilean invariance on the periodic domain), so
   $u > 0$ everywhere: (44) gives $\Delta t \propto \Delta x$ (from rest, (90): $\propto \sqrt{\Delta x}$) and there is no stagnation point.
+* fivebranch, sevenbranch: $\rho^0 \ge e^{-\pi^2}/\pi \approx 1.6\cdot10^{-5}$ at the ends; the data are periodic. With the
+  default `dissipation` they complete to $T = 1$ at $\lambda = 1$ and 1e-2 ($N = 200, 2000$); `shift` and `second` collapse
+  (except fivebranch at $N = 200$: shift at $\lambda = 1$, second at 1e-2). At $\lambda = 1$ sevenbranch concentrates
+  (max $\rho \approx 46$ at $T = 1$, $N = 2000$), the singularity of the dispersive regime.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
   Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,

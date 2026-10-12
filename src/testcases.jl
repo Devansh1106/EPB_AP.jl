@@ -21,7 +21,7 @@ Base.@kwdef struct TestCase
 end
 
 const CASES = (:smooth, :steep, :nearvacuum, :bump, :step, :expansion, :soliton, :ap, :simplewave,
-               :riemann, :riemann_speed)
+               :riemann, :riemann_speed, :fivebranch, :sevenbranch)
 
 "Directory of the parameter files `<case>.toml`, one per entry of `CASES`."
 const PARAMS = joinpath(dirname(@__DIR__), "params")
@@ -45,6 +45,9 @@ function problem(name::Symbol, domain, λ, p)
         exact = (x, t) -> riemann_exact(x, t; nr = p["nr"])
         return (exact = exact, init = x -> exact(x, 0.0)[1:2], diagnostics = riemann_diagnostics(p["nr"]))
     end
+    branch = x -> exp.(-(x .- π) .^ 2) ./ π               # Degond et al. §5.3, after Liu & Wang
+    name == :fivebranch && return (init = x -> (branch(x), sin.(x) .^ 3),)
+    name == :sevenbranch && return (init = x -> (branch(x), sin.(2x) .* cos.(x)),)
     throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
 end
 
