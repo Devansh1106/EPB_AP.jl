@@ -1,10 +1,10 @@
 # Parameters of the test case `shocktube`: colliding streams of EulerAP.jl (ρ = 1, u = 1 for x < 0, -1 for x ≥ 0). See SPEC §7.
 case = "shocktube"   # initial data (and exact solution) of this case
-domain = [-0.4, 0.4] # [a, b]
+domain = [-0.2, 0.2] # [a, b]
 bc = "extrapolate"   # as EulerAP.jl: ρ, u extrapolated (ghost = copy), φ periodic
 N = 50               # number of cells (EulerAP.jl)
 lambda = 1e-4        # scale parameter λ of the Poisson equation
-T = 0.4              # final time; the shocks reach ±0.247
+T = 0.2              # final time; the shocks reach ±0.124
 snapshots = []       # extra output times in (0, T)
 
 [scheme]

@@ -131,7 +131,7 @@ and the energy identity does not hold.
 | riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
 | fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
-| shocktube (EulerAP.jl) | $[-0.4,0.4]$, extrapolation | 1; $1$ for $x<0$, $-1$ for $x \ge 0$ | 1e-4 | 0.4 | 50 | scheme rule | ICE solution (two shocks) |
+| shocktube (EulerAP.jl) | $[-0.2,0.2]$, extrapolation | 1; $1$ for $x<0$, $-1$ for $x \ge 0$ | 1e-4 | 0.2 | 50 | scheme rule | ICE solution (two shocks) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
@@ -149,7 +149,7 @@ and the energy identity does not hold.
   at $T = 1$, $N = 2000$), the singularity of the dispersive regime; at $\lambda = $ 1e-2 it spreads to the ends and
   0.15% (fivebranch) and 1.1% (sevenbranch) of the mass leaves by $T = 1$.
 * shocktube: colliding streams; ICE solution $\rho_m = (3+\sqrt5)/2$, $u = 0$ for $|x| < st$, $s = \rho_m - 2 = 0.618$
-  (Rankine–Hugoniot with $p = \rho$), so the shocks are at $\pm 0.247$ at $T$, and the inflow raises the mass by $2t$.
+  (Rankine–Hugoniot with $p = \rho$), so the shocks are at $\pm 0.124$ at $T = 0.2$, and the inflow raises the mass by $2t$.
   The computed plateau converges in $N$ to 2.661 (dissipation) or 2.658–2.662 (shift), not to $\rho_m$; it tends to $\rho_m$ as
   $\Delta t/\Delta x \to 0$ (dissipation, $N = 800$: 2.661, 2.643, 2.626, 2.620 for $\Delta t/\Delta x$ = 0.45, 0.2, 0.05, 0.0125):
   (15) pairs $\bar\rho^n$ with $\phi^{n+1}$, so the pressure is conservative only up to $O(\Delta t)$ at a shock. At $\lambda = 1$ the

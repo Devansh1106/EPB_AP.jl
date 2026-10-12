@@ -85,10 +85,11 @@ end
     r = solve(c)
     ρm, s = (3 + sqrt(5)) / 2, (sqrt(5) - 1) / 2
     @test r.status == :completed
-    @test r.history.mass[end] ≈ 0.8 + 2 * 0.4 atol = 1e-12   # inflow ρu = 1 at both ends
+    (a, b), T = c.domain, c.T
+    @test r.history.mass[end] ≈ (b - a) + 2T atol = 1e-12   # inflow ρu = 1 at both ends
     x, dx = r.grid.x, r.grid.dx
     xs = x[findlast(r.rho .> (1 + ρm) / 2)] + dx / 2
-    @test abs(xs - s * 0.4) < 3dx && abs(x[findfirst(r.rho .> (1 + ρm) / 2)] - dx / 2 + s * 0.4) < 3dx
+    @test abs(xs - s * T) < 3dx && abs(x[findfirst(r.rho .> (1 + ρm) / 2)] - dx / 2 + s * T) < 3dx
     @test abs(r.rho[argmin(abs.(x))] / ρm - 1) < 0.02     # 2.661: O(Δt) at the shocks (SPEC §7)
 end
 
