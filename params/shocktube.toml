@@ -1,0 +1,22 @@
+# Parameters of the test case `shocktube`: colliding streams of EulerAP.jl (ρ = 1, u = 1 for x < 0, -1 for x ≥ 0). See SPEC §7.
+case = "shocktube"   # initial data (and exact solution) of this case
+domain = [-0.4, 0.4] # [a, b]
+bc = "extrapolate"   # as EulerAP.jl: ρ, u extrapolated (ghost = copy), φ periodic
+N = 50               # number of cells (EulerAP.jl)
+lambda = 1e-4        # scale parameter λ of the Poisson equation
+T = 0.4              # final time; the shocks reach ±0.247
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "dissipation" # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4); EulerAP.jl uses second order, minmod
+theta = 0.5          # "dissipation" only: θ of Corollary 3.17
+kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
+kappa_s = 0.0
+# limiter = "minmod" # "second" only: "minmod" or "none" (central slopes)
+# c_D = 1.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
+# cfl = 0.4          # "second" only: cfl of (91)
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = inf          # upper bound on Δt/Δx
