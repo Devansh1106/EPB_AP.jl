@@ -80,6 +80,19 @@ end
     @test solve(testcase(:sevenbranch; N = 200, scheme = Scheme())).status == :collapse
 end
 
+@testset "shock tube (EulerAP.jl): shock positions, middle state, inflow" begin
+    c = testcase(:shocktube; N = 200)
+    r = solve(c)
+    ρm, s = (3 + sqrt(5)) / 2, (sqrt(5) - 1) / 2
+    @test r.status == :completed
+    (a, b), T = c.domain, c.T
+    @test r.history.mass[end] ≈ (b - a) + 2T atol = 1e-12   # inflow ρu = 1 at both ends
+    x, dx = r.grid.x, r.grid.dx
+    xs = x[findlast(r.rho .> (1 + ρm) / 2)] + dx / 2
+    @test abs(xs - s * T) < 3dx && abs(x[findfirst(r.rho .> (1 + ρm) / 2)] - dx / 2 + s * T) < 3dx
+    @test abs(r.rho[argmin(abs.(x))] / ρm - 1) < 0.02     # 2.661: O(Δt) at the shocks (SPEC §7)
+end
+
 @testset "Riemann problem with walls [1, §7.4]: shock position and middle state" begin
     c = testcase(:riemann)
     @test c.bc == :wall && c.N == 400 && c.T == 50
