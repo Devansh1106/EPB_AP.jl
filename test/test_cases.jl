@@ -71,6 +71,25 @@ end
     end
 end
 
+@testset "Neumann ([1, §7.3], EulerAP.jl): u = 0 in the left ghost, ∂E φ = 0 at both ends" begin
+    N, dx = 20, 0.05
+    ρ, u = collect(range(1, 2; length = N)), collect(range(0.1, 0.5; length = N))
+    _, _, _, F = EPB_AP.step(ρ, u, zeros(N), 1e-3, dx, 1.0, zeros(N + 1), 0.0; bc = :neumann)
+    @test length(F) == N + 1 && F[N] ≈ ρ[N] * u[N] && F[N+1] ≈ ρ[1] * u[1] / 2   # η = 0: F = ρ̄ {u}
+    _, _, F, f = EPB_AP.semidiscrete_rhs(ρ, ρ .* u, zeros(N), dx, SecondOrder(); bc = :neumann)
+    @test F[N] ≈ ρ[N] * u[N] && F[N+1] ≈ ρ[1] * u[1] / 2 && f.vm[N+1] == 0
+    @test EPB_AP.dphi(sin.(1:N), dx, :neumann)[N:N+1] == [0, 0]
+end
+
+@testset "plasma expansion ([1, §7.3]): ion front" begin
+    c = testcase(:plasmaexpansion; N = 1000)
+    @test c.bc == :neumann && testcase(:plasmaexpansion).N == 10000
+    r = solve(c)
+    @test r.status == :completed && all(r.history.min_rho .> 0)
+    @test abs(r.history.mass[end] - r.history.mass[1]) < 1e-3        # flux through the left face only
+    @test 2.1 < maximum(r.u) < 2.6 && 6.2 < r.grid.x[argmax(r.u)] < 6.8   # N = 10000: 2.46 at 6.57
+end
+
 @testset "five- and seven-branch tests (Degond et al. §5.3): the dissipation scheme completes" begin
     for name in (:fivebranch, :sevenbranch), lambda in (1.0, 1e-2)
         r = solve(testcase(name; lambda, N = 200))
@@ -134,10 +153,10 @@ end
 @testset "second order on every case: mass, positivity, AP, order" begin
     for name in filter(!=(:sevenbranch), EPB_AP.CASES)   # sevenbranch: second order collapses at t ≈ 0.53 (SPEC §7)
         c = testcase(name; scheme = SecondOrder())
-        r = solve(testcase(name; scheme = SecondOrder(), T = min(c.T, 0.1 * (c.domain[2] - c.domain[1]))))
+        r = solve(testcase(name; scheme = SecondOrder(), N = min(c.N, 2000), T = min(c.T, 0.1 * (c.domain[2] - c.domain[1]))))
         h = r.history
         @test r.status == :completed
-        c.bc == :extrapolate || @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]   # mass leaves
+        EPB_AP.ghosted(c.bc) || @test maximum(abs, h.mass .- h.mass[1]) <= 1e-13 * h.mass[1]   # mass leaves
         @test all(h.min_rho .> 0)
     end
     r = [solve(testcase(:ap; lambda, T = 0.1, scheme = SecondOrder())).history.ap_residual[end]

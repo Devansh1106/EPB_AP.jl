@@ -54,14 +54,14 @@ end
     solve(ρ0, u0, grid, λ, T; scheme = Scheme(), timestep = TimeStep(), snapshots = Float64[])
 
 Integrate the scheme (`Scheme()` first order, `SecondOrder()` second order) from (ρ0, u0) to time T
-on `grid` (periodic, walls or extrapolation);
+on `grid` (periodic, walls, extrapolation or Neumann);
 φ⁰ is computed from ρ0 by (29).
 `status` is `:completed` or `:collapse`.
 """
 function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeStep(),
                snapshots = Float64[], maxretry = 100)
     dx, bc = grid.dx, grid.bc
-    wall = bc == :wall
+    wall = neumann_phi(bc)                     # ∂E φ = 0 at the ends, in the field energy
     ρ, u = float.(copy(ρ0)), float.(copy(u0))
     φ = initial_potential(ρ, λ, dx; bc)
     hist = (t = [0.0], dt = [NaN], energy = [energy(ρ, u, φ, λ, dx; wall)], min_rho = [minimum(ρ)],

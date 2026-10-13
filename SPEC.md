@@ -116,6 +116,11 @@ difference towards the ghost in (54), mirrored ghost slope), while $\partial_E\p
 $(\phi_1 - \phi_N)/\Delta x$. The potential equation (52), (88) is then not symmetric. Mass leaves through the ends
 and the energy identity does not hold.
 
+The plasma expansion uses the boundary conditions of [1, §7.3] and EulerAP.jl (`bc = "neumann"`): extrapolation for
+$\rho$ at both ends, $u = 0$ in the left ghost and extrapolated $u$ on the right, homogeneous Neumann for $\phi$. The edges
+are those of `extrapolate`, but the left face has $\lbrace u\rbrace = u_1/2$ (second order: $u$ slope towards the ghost
+$u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) are symmetric. Ions leave through the left face.
+
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
 | smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
@@ -132,6 +137,7 @@ and the energy identity does not hold.
 | fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | shocktube (EulerAP.jl) | $[-0.2,0.2]$, extrapolation | 1; $1$ for $x<0$, $-1$ for $x \ge 0$ | 1e-4 | 0.2 | 50 | scheme rule | ICE solution (two shocks) |
+| plasmaexpansion ([1, §7.3]) | $[-10,40]$, Neumann | $\tfrac12 - \tfrac1\pi\arctan(\pi x)$, 0 | 1e-2 | 3 | 10000 | scheme rule | ion front ([1, Fig. 7]) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
   snapshots, `…_history.csv` (t, Δt, $E_h$, min ρ, mass, $\lVert e^\phi-\rho\rVert_\infty$, CFL ratio); header lines `# key = value`.
@@ -155,6 +161,9 @@ and the energy identity does not hold.
   (15) pairs $\bar\rho^n$ with $\phi^{n+1}$, so the pressure is conservative only up to $O(\Delta t)$ at a shock. At $\lambda = 1$ the
   streams concentrate at $x = 0$ (max $\rho \propto 1/\Delta x$, dissipation) and shift and second order collapse at $t \approx 0.04$;
   second order at 1e-4 needs $\Delta t \ll \Delta x$ (167 000 steps at $N = 200$) and collapses at $N = 800$.
+* plasmaexpansion: default `shift` (EulerAP.jl: first order with $\eta$); `dissipation` and `second` also complete. At
+  $N = 10000$ the ion front (max $u$) is at $x \approx 6.6$ with max $u$ = 2.55 (shift), 2.46 (dissipation), 2.59 (second);
+  the peak grows with $N$ (dissipation: 2.20 at $N = 1000$, 2.27 at 2000), as [1] notes. Mass changes by $\approx 8\cdot10^{-5}$.
 * Riemann: $u_m$ solves $(1 - n_r e^{u_m})(u_m^2 - 2u_m - 2\log n_r) - 2u_m^2 = 0$, $u_s = u_m/(1 - n_r e^{u_m})$.
   Shock speed $(x_s(8) - x_s(4))/4$, $x_s$ by equal areas over $[x_a, b]$, $x_a = \tfrac12(u_m - 1 + u_s)t$.
 * Unit-test states (no time integration, §5.3 order-1 column): smooth, steep ($u^0 = 0.5\cos$), near vacuum,

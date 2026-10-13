@@ -26,7 +26,7 @@ In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of
 or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change.
 `run_case` prints the files it writes and warns if the run stopped before `T` (a collapse); the files then hold the
 state at the time reached (`# t` in the header), while their names keep `T`.
-Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch, shocktube`.
+Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch, shocktube, plasmaexpansion`.
 
 ## Parameters
 
