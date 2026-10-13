@@ -99,3 +99,18 @@ function shock_position(x, ρ, t, dx; nr = 0.5)
     idx = findall(>=(xa), x)
     return x[first(idx)] - dx / 2 + dx * sum(ρ[idx] .- nr) / (exp(-um) - nr)
 end
+
+"""
+    shocktube_exact(x, t)
+
+Colliding streams of EulerAP.jl (ρ = 1, u = ±1 for x ≶ 0), as ICE solution (φ = log ρ): two shocks
+at ±s t with u = 0 and ρ = ρ_m between them; Rankine–Hugoniot for p = ρ gives s(ρ_m - 1) = 1 and
+s = ρ_m - 2, so ρ_m = (3 + √5)/2 and s = ρ_m - 2 = (√5 - 1)/2.
+"""
+function shocktube_exact(x, t)
+    ρm = (3 + sqrt(5)) / 2
+    s = ρm - 2
+    ρ = [abs(xi) < s * t ? ρm : 1.0 for xi in x]
+    u = [abs(xi) < s * t ? 0.0 : xi < 0 ? 1.0 : -1.0 for xi in x]
+    return ρ, u, log.(ρ)
+end

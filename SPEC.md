@@ -107,7 +107,7 @@ $(\partial_E\phi) = 0$ (so also $Q = 0$ and no source contribution there); with 
 $\rho$ enters no flux. Mass and the energy identity are kept. Up to $T = 50$ no wave reaches a wall (rarefaction head
 at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponentially small tails.
 
-The five- and seven-branch tests use the boundary conditions of EulerAP.jl (`bc = "extrapolate"`): `ExtrapolateBC` for
+The five- and seven-branch tests and the shock tube use the boundary conditions of EulerAP.jl (`bc = "extrapolate"`): `ExtrapolateBC` for
 $(\rho, u)$, a ghost cell copying the cell inside, and periodic $\phi$. Degond et al. only say "fictitious states" and
 impose $\phi$ by Dirichlet data, so their conditions are not reproduced exactly. Discretely, edge arrays of the fluxes have $N + 1$
 entries: edge $N$ is the right face of cell $N$ and edge $N+1$ the left face of cell 1, each between the cell and its
@@ -136,6 +136,7 @@ $u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) 
 | riemann_speed (§5.5) | as above | as above, $n_r = 0.5$ | 1e-4 | 8 (snapshot 4) | 2000, 4000, 8000 | (44) | $u_s$ from [1, (7.10)] |
 | fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
+| shocktube (EulerAP.jl) | $[-0.2,0.2]$, extrapolation | 1; $1$ for $x<0$, $-1$ for $x \ge 0$ | 1e-4 | 0.2 | 50 | scheme rule | ICE solution (two shocks) |
 | plasmaexpansion ([1, §7.3]) | $[-10,40]$, Neumann | $\tfrac12 - \tfrac1\pi\arctan(\pi x)$, 0 | 1e-2 | 3 | 10000 | scheme rule | ion front ([1, Fig. 7]) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
@@ -153,6 +154,13 @@ $u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) 
   stays inside (mass loss $\le 10^{-6}$, as periodic to $4\cdot10^{-6}$) and sevenbranch concentrates (max $\rho \approx 46$
   at $T = 1$, $N = 2000$), the singularity of the dispersive regime; at $\lambda = $ 1e-2 it spreads to the ends and
   0.15% (fivebranch) and 1.1% (sevenbranch) of the mass leaves by $T = 1$.
+* shocktube: colliding streams; ICE solution $\rho_m = (3+\sqrt5)/2$, $u = 0$ for $|x| < st$, $s = \rho_m - 2 = 0.618$
+  (Rankine–Hugoniot with $p = \rho$), so the shocks are at $\pm 0.124$ at $T = 0.2$, and the inflow raises the mass by $2t$.
+  The computed plateau converges in $N$ to 2.661 (dissipation) or 2.658–2.662 (shift), not to $\rho_m$; it tends to $\rho_m$ as
+  $\Delta t/\Delta x \to 0$ (dissipation, $N = 800$: 2.661, 2.643, 2.626, 2.620 for $\Delta t/\Delta x$ = 0.45, 0.2, 0.05, 0.0125):
+  (15) pairs $\bar\rho^n$ with $\phi^{n+1}$, so the pressure is conservative only up to $O(\Delta t)$ at a shock. At $\lambda = 1$ the
+  streams concentrate at $x = 0$ (max $\rho \propto 1/\Delta x$, dissipation) and shift and second order collapse at $t \approx 0.04$;
+  second order at 1e-4 needs $\Delta t \ll \Delta x$ (167 000 steps at $N = 200$) and collapses at $N = 800$.
 * plasmaexpansion: default `shift` (EulerAP.jl: first order with $\eta$); `dissipation` and `second` also complete. At
   $N = 10000$ the ion front (max $u$) is at $x \approx 6.6$ with max $u$ = 2.55 (shift), 2.46 (dissipation), 2.59 (second);
   the peak grows with $N$ (dissipation: 2.20 at $N = 1000$, 2.27 at 2000), as [1] notes. Mass changes by $\approx 8\cdot10^{-5}$.
