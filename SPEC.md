@@ -107,7 +107,7 @@ $(\partial_E\phi) = 0$ (so also $Q = 0$ and no source contribution there); with 
 $\rho$ enters no flux. Mass and the energy identity are kept. Up to $T = 50$ no wave reaches a wall (rarefaction head
 at $x = -t \ge -50$, shock at $u_s t \le 59$), so the walls only see exponentially small tails.
 
-The five- and seven-branch tests and the shock tube use the boundary conditions of EulerAP.jl (`bc = "extrapolate"`): `ExtrapolateBC` for
+The five- and seven-branch tests, the shock tubes and the positivity test use the boundary conditions of EulerAP.jl (`bc = "extrapolate"`): `ExtrapolateBC` for
 $(\rho, u)$, a ghost cell copying the cell inside, and periodic $\phi$. Degond et al. only say "fictitious states" and
 impose $\phi$ by Dirichlet data, so their conditions are not reproduced exactly. Discretely, edge arrays of the fluxes have $N + 1$
 entries: edge $N$ is the right face of cell $N$ and edge $N+1$ the left face of cell 1, each between the cell and its
@@ -123,7 +123,7 @@ $u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) 
 
 | case | domain | $\rho^0$, $u^0$ | $\lambda$ | $T$ | $N$ | $\Delta t$ | reference |
 |---|---|---|---|---|---|---|---|
-| smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-0.3\mathrm{sech}(2x)$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
+| smooth (EulerAP.jl, not §5.2) | $[-10,10]$ | $1-a\,\mathrm{sech}(2x)$, $a = 0.3$, $U = 0.2$ | 1 | 1 | 50; order 100…800 | (44) | fine grid $N=3200$, cell-averaged |
 | steep (§5.2) | $[0,1]$ | $1+0.8\sin^3 2\pi x$, $0.25\cos 2\pi x$ | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | near vacuum (§5.2) | $[0,1]$ | $10^{-4}+(1-10^{-4})e^{-60(x-1/2)^2}$, 0 | 1, 1e-3 | 0.5 | 200 | (44) | none |
 | bump (§5.6) | $[0,1]$ | $1+\tfrac12 e^{-(x-1/2)^2/0.005}$, 1 | 1, 0.1 | 2 | 200 | scheme rule | none |
@@ -137,6 +137,8 @@ $u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) 
 | fivebranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin^3 x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | sevenbranch (Degond et al. §5.3) | $[0,2\pi]$, extrapolation | $\tfrac1\pi e^{-(x-\pi)^2}$, $\sin 2x\cos x$ | 1, 1e-2 | 1 | 2000 | scheme rule | none (fine grid) |
 | shocktube (EulerAP.jl) | $[-0.2,0.2]$, extrapolation | 1; $1$ for $x<0$, $-1$ for $x \ge 0$ | 1e-4 | 0.2 | 50 | scheme rule | ICE solution (two shocks) |
+| revshocktube | $[-0.2,0.2]$, extrapolation | 1; $-1$ for $x<0$, $1$ for $x \ge 0$ | 1e-4 | 0.2 | 50 | scheme rule | none (two rarefactions, $\rho \to e^{-1}$ at $x = 0$) |
+| positivity (J. Sci. Comput. 97:73, Fig. 2) | $[-1,1]$, extrapolation | 1; $-u_0$ for $x<0$, $u_0$ for $x>0$, $u_0 = 3$ | 1e-4 | 0.15 | 100 | scheme rule | none ($\min\rho > 0$) |
 | plasmaexpansion ([1, §7.3]) | $[-10,40]$, Neumann | $\tfrac12 - \tfrac1\pi\arctan(\pi x)$, 0 | 1e-2 | 3 | 10000 | scheme rule | ion front ([1, Fig. 7]) |
 
 * Data files: `data/<case>_<scheme>_N<N>_lambda<λ>_T<T>.csv` (x, ρ, u, φ and exact columns if any), `…_t<t>.csv`
@@ -154,6 +156,14 @@ $u_1 - 0$) and $\partial_E\phi = 0$ at both faces, as with walls, so (52), (88) 
   stays inside (mass loss $\le 10^{-6}$, as periodic to $4\cdot10^{-6}$) and sevenbranch concentrates (max $\rho \approx 46$
   at $T = 1$, $N = 2000$), the singularity of the dispersive regime; at $\lambda = $ 1e-2 it spreads to the ends and
   0.15% (fivebranch) and 1.1% (sevenbranch) of the mass leaves by $T = 1$.
+* positivity: the extreme Riemann problem of J. Sci. Comput. 97:73 (2023), Fig. 2 (there isentropic Euler, $\gamma = 2$,
+  $\varepsilon = 1$, periodic; here the Boltzmann pressure $p = \rho$). The streams recede from $x = 0$, where the density
+  drops towards the quasineutral middle state $e^{-u_0}$. With $\lambda = 10^{-4}$ and outflow ends all three schemes
+  complete for $N = 50 \ldots 1600$ ($\min\rho$: shift $2.6\cdot10^{-3} \ldots 4\cdot10^{-5}$, dissipation 0.02, second
+  $1.7\cdot10^{-3} \ldots 2\cdot10^{-4}$, decreasing with $N$). As in the paper ($\lambda = 1$, periodic, so the streams also
+  collide at $x = \pm 1$) only `dissipation` completes; `shift` and `second` collapse ($\Delta t < 10^{-4}\Delta x$) after
+  about 50 and 115 steps on any grid, shift at the vacuum and second order at the collision. With $u_0 = 4$ they collapse
+  for $N \ge 200$ (shift) and $N \ge 800$ (second).
 * shocktube: colliding streams; ICE solution $\rho_m = (3+\sqrt5)/2$, $u = 0$ for $|x| < st$, $s = \rho_m - 2 = 0.618$
   (Rankine–Hugoniot with $p = \rho$), so the shocks are at $\pm 0.124$ at $T = 0.2$, and the inflow raises the mass by $2t$.
   The computed plateau converges in $N$ to 2.661 (dissipation) or 2.658–2.662 (shift), not to $\rho_m$; it tends to $\rho_m$ as

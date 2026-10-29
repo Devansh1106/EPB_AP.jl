@@ -10,7 +10,7 @@ snapshots = []       # extra output times in (0, T)
 [scheme]
 kind = "shift"       # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4)
 # limiter = "minmod" # "second" only: "minmod" or "none" (central slopes)
-# c_D = 1.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
+c_D = 100.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
 # cfl = 0.4          # "second" only: cfl of (91)
 
 [timestep]

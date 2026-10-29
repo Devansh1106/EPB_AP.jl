@@ -1,4 +1,4 @@
-# Parameters of the test case `smooth`: sech density dip, ρ = 1 - 0.3 sech(2x), u = U (the state of EulerAP.jl,
+# Parameters of the test case `smooth`: sech density dip, ρ = 1 - a sech(2x), u = U (with a = 0.3, the state of EulerAP.jl,
 # examples/euler_poisson_boltzmann_1d/euler_poisson_boltzmann_1d_smooth.jl, with a uniform drift U). See SPEC §7.
 case = "smooth"      # initial data (and exact solution) of this case
 domain = [-10.0, 10.0]  # [a, b]
@@ -20,5 +20,6 @@ cfl = 0.25           # used only when mode = "fixed"
 dtmax = inf          # upper bound on Δt/Δx
 
 [init]
+a = 0.3              # depth of the dip: min ρ⁰ = 1 - a, in [0, 1); near 1 for a positivity test
 U = 0.2              # uniform drift: the at-rest solution moved with speed U (Galilean invariance);
                      # U > max|u| of that solution (≈ 0.066), so u ≠ 0 everywhere and Δt ∝ Δx

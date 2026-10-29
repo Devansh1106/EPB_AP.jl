@@ -26,7 +26,7 @@ In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of
 or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change.
 `run_case` prints the files it writes and warns if the run stopped before `T` (a collapse); the files then hold the
 state at the time reached (`# t` in the header), while their names keep `T`.
-Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch, shocktube, plasmaexpansion`.
+Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch, shocktube, revshocktube, positivity, plasmaexpansion`.
 
 ## Parameters
 
@@ -34,6 +34,8 @@ Each case reads its parameters (domain, boundary, N, λ, T, scheme, time step) f
 Edit that file, or copy it and run the copy: `run_case("my_step.toml")`. Keywords override the file.
 
 ## Plot
+
+All scripts, with every option: [scripts/README.md](scripts/README.md).
 
 ```sh
 julia --project=scripts -e 'using Pkg; Pkg.instantiate()'    # once
@@ -50,6 +52,18 @@ columns, in that order (default: all); `--zoom x1,x2` adds to each panel an inse
 also fixes its y-range), placed by `--inset topright|top|bottom|center|...` (default top right); `--legend bottomleft|...` moves the
 legend (default: best place, bottom left with `--zoom`). Curves are labelled by scheme: FOPD, FODD, SODD. Legends name the schemes FOPD (shift), FODD (dissipation) and SODD (second).
 The exact solution of `riemann` (and `riemann_speed`) is the quasineutral (λ → 0) one, so plotting it for λ > 1e-4 prints a warning.
+
+### Plot with matplotlib (for a manuscript)
+
+`scripts/plot.py` draws the same plots with matplotlib (needs `numpy`, `matplotlib`), with the same options, sized
+for LaTeX: Computer Modern rendered by LaTeX (`--no-usetex`: matplotlib's own; LaTeX needs the `type1cm` package),
+9 pt labels, 8 pt ticks and legend, full frame with ticks inside, no grid. `--width` is the figure width in inches
+(default 3.4 for one panel, 6.5 for more), so include it at that size; output PNG at 300 dpi (or name `.pdf`, `.svg`).
+With `--zoom`, a grey box marks the region and lines join it to the inset's corners.
+```sh
+python3 scripts/plot.py data/riemann_shift_N200_lambda0.0001_T50.0.csv data/riemann_second_N200_lambda0.0001_T50.0.csv \
+        riemann_rho.png --var rho --zoom 45,62,0.69,0.73 --no-initial
+```
 
 ## Convergence
 

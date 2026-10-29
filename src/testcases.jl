@@ -22,14 +22,14 @@ end
 
 const CASES = (:smooth, :steep, :nearvacuum, :bump, :step, :expansion, :soliton, :ap, :simplewave,
                :riemann, :riemann_speed, :fivebranch, :sevenbranch, :shocktube,
-               :plasmaexpansion)
+               :revshocktube, :positivity, :plasmaexpansion)
 
 "Directory of the parameter files `<case>.toml`, one per entry of `CASES`."
 const PARAMS = joinpath(dirname(@__DIR__), "params")
 
 # Initial data, exact solution and diagnostics of a case; `p` holds the `[init]` table of its file.
 function problem(name::Symbol, domain, λ, p)
-    name == :smooth && return (init = x -> (1 .- 0.3sech.(2x), fill(float(p["U"]), length(x))),)
+    name == :smooth && return (init = x -> (1 .- p["a"] .* sech.(2x), fill(float(p["U"]), length(x))),)
     name == :steep && return (init = x -> (1 .+ 0.8sinpi.(2x) .^ 3, 0.25cospi.(2x)),)
     name == :nearvacuum && return (init = x -> (1e-4 .+ (1 - 1e-4) .* exp.(-60 .* (x .- 0.5) .^ 2), zero(x)),)
     name == :bump && return (init = x -> (1 .+ 0.5exp.(-(x .- 0.5) .^ 2 ./ 0.005), one.(x)),)
@@ -50,6 +50,8 @@ function problem(name::Symbol, domain, λ, p)
     name == :fivebranch && return (init = x -> (branch(x), sin.(x) .^ 3),)
     name == :sevenbranch && return (init = x -> (branch(x), sin.(2x) .* cos.(x)),)
     name == :shocktube && return (exact = shocktube_exact, init = x -> shocktube_exact(x, 0.0)[1:2])
+    name == :revshocktube && return (init = x -> (one.(x), ifelse.(x .< 0, -1.0, 1.0)),)   # shocktube, u reversed
+    name == :positivity && return (init = x -> (one.(x), ifelse.(x .< 0, -1.0, 1.0) .* p["u0"]),)   # extreme Riemann problem
     name == :plasmaexpansion && return (init = x -> (0.5 .- atan.(π .* x) ./ π, zero(x)),)   # [1, (7.6)]
     throw(ArgumentError("unknown test case $name; available: $(join(CASES, ", "))"))
 end
