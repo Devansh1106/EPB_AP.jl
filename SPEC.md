@@ -195,7 +195,7 @@ $\lambda$; observed order ≈ 1.
 6. Newton stop: $\lVert\delta\phi\rVert_\infty \le 10^{-12}(1+\lVert\phi\rVert_\infty)$, or
    $\lVert R\rVert_\infty \le 10^{-14} s (1+\lVert\phi\rVert_\infty)$ with $s = \max \mathrm{diag} J$ (the stencil
    scale of Remark 4.13); max 50 iterations; each update damped to $\lVert\delta\phi\rVert_\infty \le 1$.
-7. Collapse: $\Delta t < 10^{-4}\Delta x$ stops the run (§5.6). The last step is shortened to hit $T$ (and snapshot times).
+7. Collapse: $\Delta t < 10^{-5}\Delta x$ stops the run (§5.6 uses $10^{-4}\Delta x$). The last step is shortened to hit $T$ (and snapshot times).
 8. Random one-step states (§5.1) are loosely specified: 48 cells, $\log\rho \sim N(0,\sigma^2)$, $\sigma \in (0,3]$,
    optionally smoothed by a 3-point average; $u = A\cdot N(0,1)$, $A \in (0,3]$; $\lambda$ log-uniform in
    $[10^{-4}, 10]$; $\theta \in \lbrace 0.2, 0.5, 0.8\rbrace$; $\kappa = 10^U \cdot \tfrac{\Delta x}{2}(\max\lvert u\rvert+1)$,
@@ -249,7 +249,7 @@ G_e = v^-_e F_e^+ + v^+_e F_e^- \ (61),
 * Time step (§4.11): $\Delta t = \min\big((44),\ (91)\big)$, both with $\eta$ of (43); in (91)
   $\Delta t \le \mathrm{cfl} \Delta x / \max_i\big(\lvert v_i\rvert + \eta_i \max(\lvert\phi_i - \phi_{i-1}\rvert, \lvert\phi_{i+1} - \phi_i\rvert)/\Delta x\big)$,
   $\eta_i$ the larger of the two edge values, cfl = 0.4. A step that makes any stage or reconstructed density
-  non-positive is repeated with $\Delta t/2$; $\Delta t < 10^{-4}\Delta x$ is a collapse. With `TimeStep(mode = :fixed)` there is
+  non-positive is repeated with $\Delta t/2$; $\Delta t < 10^{-5}\Delta x$ is a collapse. With `TimeStep(mode = :fixed)` there is
   no retry: a non-positive density is a collapse. With walls the wall edge does not enter (91). Order studies use
   `TimeStep(mode = :fixed, cfl = 0.4)` (§5.4).
 * Walls: $\sigma = 0$ in cells 1 and $N$; $F = G = 0$ and $\partial_E\phi = 0$ on the walls, as in §7.

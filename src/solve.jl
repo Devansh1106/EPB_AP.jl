@@ -3,7 +3,7 @@
 
 * `mode = :cfl`: Δt from the scheme's rule ([`stable_dt`](@ref)), checked a posteriori: first order with
   the computed flux, a violating step being repeated with Δt divided by the measured ratio; second order
-  for positive densities, a failing step being repeated with Δt/2. Δt < 10⁻⁴Δx is a collapse.
+  for positive densities, a failing step being repeated with Δt/2. Δt < 10⁻⁵Δx is a collapse.
 * `mode = :fixed`: Δt = `cfl`·Δx, no check (§5.6, AP study); a second-order step with a non-positive
   density is a collapse.
 * `dtmax`: upper bound on Δt/Δx (e.g. 0.4 in the order studies).
@@ -73,7 +73,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
         target = first(filter(s -> s > t, stops))
         dt = timestep.mode == :fixed ? timestep.cfl * dx : rule_dt(ρ, u, φ, dx, scheme; bc)
         dt = min(dt, timestep.dtmax * dx)
-        if timestep.mode == :cfl && dt < 1e-4 * dx
+        if timestep.mode == :cfl && dt < 1e-5 * dx
             status = :collapse
             break
         end
@@ -87,7 +87,7 @@ function solve(ρ0, u0, grid::Grid, λ, T; scheme = Scheme(), timestep = TimeSte
             retried = true
         end
         failed = r > 1 && (timestep.mode == :cfl || scheme isa SecondOrder)   # fixed first order: no check
-        if failed || (timestep.mode == :cfl && retried && dt < 1e-4 * dx)
+        if failed || (timestep.mode == :cfl && retried && dt < 1e-5 * dx)
             status = :collapse
             break
         end
