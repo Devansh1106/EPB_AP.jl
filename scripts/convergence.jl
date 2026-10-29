@@ -6,15 +6,17 @@
 #
 # The scheme is the file's; --scheme changes its kind (keeping the file's settings when the kind is the same),
 # and --limiter, --c_D then set those of a second-order scheme. Unknown options are an error.
-# --plot draws the L1, L2 and L∞ errors against N on log–log axes, one panel per variable, with dashed
-# reference lines of the slopes in --slope (default: the scheme's order, 1 or 2; e.g. 1,2). `yes` writes
+# --plot draws the L1, L2 and L∞ errors against N on log–log axes, one panel per variable (no title), with black
+# reference lines of the slopes in --slope (default: the scheme's order, 1 or 2; e.g. 1,2), solid for the first
+# slope and dashed, dotted for the next ones; style of scripts/style.jl. `yes` writes
 # convergence_<case>_<scheme>[_<limiter>]_lambda<λ>.png in the current directory.
+# Errors are the normalized norms (Δx/|Ω|)Σ|e|, ((Δx/|Ω|)Σe²)^½ and max|e|, so L1 ≤ L2 ≤ L∞.
 # One table per variable (default: all of ρ, u, φ and m = ρu); each grid is solved once.
 # --dtmax c caps the scheme's Δt rule at c·Δx; --fixed c uses Δt = c·Δx (§5.4 order studies: 0.4).
 # Errors are measured against the exact solution when the case has one; otherwise against a
 # reference computed by the same scheme on Nref cells (default 4·max N), restricted by cell averaging.
 using EPB_AP, Printf
-"--plot" in ARGS && using Plots
+"--plot" in ARGS && (using Plots; include("style.jl"))
 
 const OPTIONS = ("scheme", "lambda", "T", "N", "dtmax", "fixed", "var", "ref", "limiter", "c_D", "plot", "slope")
 
@@ -84,7 +86,8 @@ function main(args)
         prev = nothing
         for (N, r) in zip(Ns, runs)
             e = field(r, var) .- reference(r, var)
-            errs = (r.grid.dx * sum(abs, e), sqrt(r.grid.dx * sum(abs2, e)), maximum(abs, e))
+            w = 1 / length(e)                                     # Δx/|Ω|: normalized norms, L1 ≤ L2 ≤ L∞
+            errs = (w * sum(abs, e), sqrt(w * sum(abs2, e)), maximum(abs, e))
             ord = prev === nothing ? ("-", "-", "-") :
                   map((a, b) -> @sprintf("%.2f", log(a / b) / log(N / prev[1])), prev[2], errs)
             @printf("%6d  %11.3e %6s  %11.3e %6s  %11.3e %6s\n", N, errs[1], ord[1], errs[2], ord[2], errs[3], ord[3])
@@ -95,7 +98,7 @@ function main(args)
     if haskey(o, "plot")
         out = o["plot"] == "yes" ? default_plot_name(case) : o["plot"]
         slopes = parse.(Float64, split(get(o, "slope", case.scheme isa SecondOrder ? "2" : "1"), ","))
-        plot_errors(Ns, vars, table, slopes, out, header)
+        plot_errors(Ns, vars, table, slopes, out)
     end
 end
 
@@ -106,25 +109,24 @@ function default_plot_name(case)
 end
 
 # Log–log errors against N, one panel per variable, with reference slopes through the first L1 point.
-function plot_errors(Ns, vars, table, slopes, out, title)
+function plot_errors(Ns, vars, table, slopes, out)
     panels = map(vars) do var
         e = reduce(vcat, permutedims.(collect.(table[var])))      # rows: N, columns: L1, L2, L∞
-        p = plot(; xscale = :log10, yscale = :log10, xlabel = "N", ylabel = "error of $var",
+        p = plot(; xscale = :log10, yscale = :log10, xlabel = "N", ylabel = "error in $(symbol(var))",
                  xticks = (Ns, string.(Ns)), legend = :topright)
-        for (k, (name, mark)) in enumerate((("L1", :circle), ("L2", :square), ("L∞", :utriangle)))
-            plot!(p, Ns, e[:, k]; label = name, marker = mark, lw = 1.5, color = k)
-        end
         for (j, q) in enumerate(slopes)
             y0 = 0.5e[1, 1]                                       # just below the first L1 point
-            plot!(p, Ns, y0 .* (Ns[1] ./ Ns) .^ q; label = "slope $(q == round(q) ? Int(q) : q)",
-                  ls = (:dash, :dot, :dashdot)[mod1(j, 3)], color = :black, lw = 1)
+            reference!(p, Ns, y0 .* (Ns[1] ./ Ns) .^ q; label = "slope $(q == round(q) ? Int(q) : q)",
+                       ls = (:solid, :dash, :dot, :dashdot)[mod1(j, 4)])
+        end
+        for (k, name) in enumerate(("L1", "L2", "L∞"))
+            curve!(p, Ns, e[:, k], k; label = name)
         end
         p
     end
     n = length(panels)
     nc = n == 4 ? 2 : min(n, 3); nr = cld(n, nc)
-    fig = plot(panels...; layout = (nr, nc), size = (420nc, 400nr + 30), plot_title = title,
-               plot_titlefontsize = 10, margin = 4Plots.mm, left_margin = 10Plots.mm, bottom_margin = 8Plots.mm)
+    fig = plot(panels...; layout = (nr, nc), size = (420nc, 400nr), margin = 4Plots.mm, left_margin = 10Plots.mm, bottom_margin = 8Plots.mm)
     savefig(fig, out)
     println("\nwrote ", out)
 end

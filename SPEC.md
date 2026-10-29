@@ -200,8 +200,9 @@ $\lambda$; observed order ≈ 1.
    optionally smoothed by a 3-point average; $u = A\cdot N(0,1)$, $A \in (0,3]$; $\lambda$ log-uniform in
    $[10^{-4}, 10]$; $\theta \in \lbrace 0.2, 0.5, 0.8\rbrace$; $\kappa = 10^U \cdot \tfrac{\Delta x}{2}(\max\lvert u\rvert+1)$,
    $U \sim U(-1,1)$; $\Delta t$ halved from 1 until (CFLθ) holds.
-9. Errors: discrete norms $\Delta x\sum_i\lvert e_i\rvert$ ($L^1$), $(\Delta x\sum_i e_i^2)^{1/2}$ ($L^2$),
-   $\max_i\lvert e_i\rvert$ ($L^\infty$) at cell centres; fine-grid references are restricted by averaging blocks of
+9. Errors: normalized discrete norms $\frac{\Delta x}{\lvert\Omega\rvert}\sum_i\lvert e_i\rvert$ ($L^1$),
+   $(\frac{\Delta x}{\lvert\Omega\rvert}\sum_i e_i^2)^{1/2}$ ($L^2$), $\max_i\lvert e_i\rvert$ ($L^\infty$) at cell centres,
+   so that $L^1 \le L^2 \le L^\infty$; fine-grid references are restricted by averaging blocks of
    $N_{ref}/N$ cells.
 10. §5.6 caps the Remark 3.22 step by $\Delta t \le 0.9\Delta x/(\max_i\lvert u^n_i\rvert + 1)$. **Not used** (author's
     decision): both schemes take $\Delta t$ from their $X$ bound only. Remark 3.23 needs $\max\lvert u\rvert\Delta t/\Delta x \le 1$

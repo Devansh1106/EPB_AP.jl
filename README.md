@@ -40,9 +40,16 @@ julia --project=scripts -e 'using Pkg; Pkg.instantiate()'    # once
 julia --project=scripts scripts/plot.jl data/step_dissipation_N200_lambda0.1_T1.0.csv
 ```
 
-Each panel shows the initial data (dotted), the numerical solution and, if known, the exact solution (dashed).
+Each panel shows the numerical solution, the initial data and, if known, the exact solution. Plot style (all scripts,
+`scripts/style.jl`): references are black lines of width 1 (exact solution and reference slopes solid; initial data solid, or dashed
+when an exact solution is drawn too); every other curve
+has its own colour and marker, width 1.2; axes use the symbols ρ, u, ϕ; no titles.
 Several files are drawn in the same panels, e.g. two schemes or grids, with an optional output name:
-`scripts/plot.jl data/a.csv data/b.csv compare.png`. `--no-init` and `--no-exact` leave out the initial data and the exact solution.
+`scripts/plot.jl data/a.csv data/b.csv compare.png`. `--no-initial` (or `--no-init`) and `--no-exact` leave out the initial data and the exact solution; `--var rho,phi` plots only those
+columns, in that order (default: all); `--zoom x1,x2` adds to each panel an inset magnifying [x1, x2] (`x1,x2,y1,y2`
+also fixes its y-range), placed by `--inset topright|top|bottom|center|...` (default top right); `--legend bottomleft|...` moves the
+legend (default: best place, bottom left with `--zoom`). Curves are labelled by scheme: FOPD, FODD, SODD. Legends name the schemes FOPD (shift), FODD (dissipation) and SODD (second).
+The exact solution of `riemann` (and `riemann_speed`) is the quasineutral (λ → 0) one, so plotting it for λ > 1e-4 prints a warning.
 
 ## Convergence
 
@@ -56,4 +63,22 @@ julia --project=scripts scripts/convergence.jl smooth --scheme second --plot yes
 ```
 `--scheme` keeps the file's settings when the kind is unchanged; unknown options are an error.
 `--plot yes` writes `convergence_<case>_<scheme>[_<limiter>]_lambda<λ>.png` (or `--plot out.png`): L1, L2 and L∞
-errors against N per variable, with dashed reference slopes (default: the scheme's order).
+errors against N per variable, with black reference slopes (default: the scheme's order; with several, the second
+and later ones dashed, dotted).
+
+## Energy stability
+
+```sh
+julia --project=scripts scripts/energy.jl smooth --plot yes      # shift, dissipation, second-none, second-minmod; λ = 1 … 1e-6
+julia --project=scripts scripts/energy.jl ap --schemes dissipation,second --lambda 1,1e-4 --N 400
+```
+For each scheme and λ: E(T) − E(0), the largest step change max(Eⁿ⁺¹ − Eⁿ) of the energy (14) and the number of steps
+where it increases. `--plot yes` writes `energy_<case>_N<N>.png`: E(t) − E(0) against t, one panel per scheme.
+`--relative` uses E(t)/E(0) instead (the energy (14) unshifted, so with E(0) < 0 a decreasing energy gives a ratio
+above 1). Given history files of runs instead of a case, nothing is run: one plot of those runs and, if the case has
+one, the exact solution's energy (black), e.g. the soliton over two periods:
+```sh
+julia --project=. -e 'using EPB_AP; T = 100/1.3; run_case(:soliton; N = 2000, T); run_case(:soliton; N = 2000, T, scheme = SecondOrder())'
+julia --project=scripts scripts/energy.jl data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
+      data/soliton_second_N2000_lambda1.0_T76.92307692307692_history.csv --relative --plot soliton_energy.png
+```
