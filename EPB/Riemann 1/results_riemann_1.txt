@@ -1,0 +1,17 @@
+julia --project=. -e 'using EPB_AP; run_case(:riemann; N = 10000, domain = (-200.0, 200.0),  scheme = Scheme(kind = :shift), lambda = 1)'
+┌ Warning: riemann, shift, N = 10000, λ = 1.0: collapse at t = 15.100829363309401 < T = 50.0 after 3687 steps; the files hold the state at t = 15.100829363309401
+└ @ EPB_AP ~/my_repos/EPB_AP/src/output.jl:90
+wrote data/riemann_shift_N10000_lambda1.0_T50.0.csv
+wrote data/riemann_shift_N10000_lambda1.0_T50.0_history.csv
+
+
+julia --project=. -e 'using EPB_AP; run_case(:riemann; N = 10000, domain = (-200.0, 200.0),  scheme = Scheme(kind = :dissipation), lambda = 1)'
+wrote data/riemann_dissipation_N10000_lambda1.0_T50.0.csv
+wrote data/riemann_dissipation_N10000_lambda1.0_T50.0_history.csv
+
+julia --project=. -e 'using EPB_AP; run_case(:riemann; N = 10000, domain = (-200.0, 200.0),  scheme = SecondOrder(), lambda = 1)'
+wrote data/riemann_second_N10000_lambda1.0_T50.0.csv
+wrote data/riemann_second_N10000_lambda1.0_T50.0_history.csv
+
+
+
