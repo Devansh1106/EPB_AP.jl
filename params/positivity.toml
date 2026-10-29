@@ -1,0 +1,28 @@
+# Parameters of the test case `positivity`: extreme Riemann problem of J. Sci. Comput. 97:73 (2023), Fig. 2,
+# receding streams ρ = 1, u = -u0 for x < 0, u0 for x > 0 (u0 = 3), so the density drops to near vacuum at x = 0.
+# There ε = 1, γ = 2, periodic; here the Boltzmann pressure p = ρ, λ = 1e-4 and outflow ends, so that shift and second
+# order complete too (λ = 1 or periodic ends: they collapse). No exact solution. See SPEC §7.
+case = "positivity"  # initial data of this case
+domain = [-1.0, 1.0] # [a, b]
+bc = "extrapolate"   # ρ, u extrapolated (outflow), φ periodic; periodic (the paper) adds a collision at x = ±1
+N = 100              # number of cells
+lambda = 1e-4        # scale parameter λ of the Poisson equation
+T = 0.15             # final time
+snapshots = []       # extra output times in (0, T)
+
+[scheme]
+kind = "dissipation" # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4)
+theta = 0.5          # "dissipation" only: θ of Corollary 3.17
+kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
+kappa_s = 0.0
+# limiter = "minmod" # "second" only: "minmod" or "none" (central slopes)
+# c_D = 1.0          # "second" only: D = c_D·Δx²·∂E ρ, (72)
+# cfl = 0.4          # "second" only: cfl of (91)
+
+[timestep]
+mode = "cfl"         # "cfl": scheme rule; "fixed": Δt = cfl·Δx
+cfl = 0.25           # used only when mode = "fixed"
+dtmax = inf          # upper bound on Δt/Δx
+
+[init]
+u0 = 3.0             # speed of the receding streams; middle state ρ = e^(-u0) as λ → 0. u0 = 4: shift and second collapse

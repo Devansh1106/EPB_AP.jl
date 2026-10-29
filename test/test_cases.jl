@@ -112,6 +112,13 @@ end
     @test abs(r.rho[argmin(abs.(x))] / ρm - 1) < 0.02     # 2.661: O(Δt) at the shocks (SPEC §7)
 end
 
+@testset "extreme Riemann problem: positivity" begin
+    for scheme in (Scheme(), Scheme(kind = :dissipation), SecondOrder())
+        r = solve(testcase(:positivity; scheme))
+        @test r.status == :completed && all(r.history.min_rho .> 0) && minimum(r.history.min_rho) < 0.05
+    end
+end
+
 @testset "Riemann problem with walls [1, §7.4]: shock position and middle state" begin
     c = testcase(:riemann)
     @test c.bc == :wall && c.N == 400 && c.T == 50
