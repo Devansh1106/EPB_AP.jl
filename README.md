@@ -21,9 +21,12 @@ using EPB_AP
 run_case(:step)                                      # writes data/step_dissipation_N200_lambda0.1_T1.0*.csv
 run_case(:smooth; lambda = 1e-2, scheme = Scheme())  # override any default
 run_case(:smooth; scheme = SecondOrder())            # second order (limiter = :minmod or :none, c_D, cfl)
+run_case(:smooth; scheme = Scheme(eta_c = 2.0))     # shift with η_e = 2 ρ̄²/ρʰ instead of (43)'s 5/4
 ```
-In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of the other order (`theta`, `kappa_*`
-or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change.
+In a parameter file, second order is `kind = "second"` under `[scheme]`; keys of the other order (`theta`, `kappa_*`,
+`eta_c` or `limiter`, `c_D`, `cfl`) are ignored, so only `kind` needs to change. `eta_c` is the factor of η in the shift
+scheme, η_e = eta_c·ρ̄²/ρʰ (default 5/4, (43); below 5/4 the hypothesis (H) of Theorem 3.5 is not guaranteed); a
+run with another value gets `_eta<c>` after the scheme in its file names.
 `run_case` prints the files it writes and warns if the run stopped before `T` (a collapse); the files then hold the
 state at the time reached (`# t` in the header), while their names keep `T`.
 Cases: `smooth, steep, nearvacuum, bump, step, expansion, soliton, ap, simplewave, riemann, riemann_speed, fivebranch, sevenbranch, shocktube, revshocktube, positivity, plasmaexpansion`.

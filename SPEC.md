@@ -222,7 +222,7 @@ $\lambda$; observed order ≈ 1.
 
 Unknowns $(\rho, q)$, $q = \rho u$; $v = q/\rho$. Code: `SecondOrder(; limiter = :minmod, c_D = 1.0, cfl = 0.4)`;
 in a parameter file `kind = "second"` under `[scheme]`, with the optional keys `limiter` (`"minmod"`, `"none"`), `c_D`
-and `cfl`; keys of the first-order schemes (`theta`, `kappa_c`, `kappa_s`) are ignored, and vice versa. Every test case
+and `cfl`; keys of the first-order schemes (`theta`, `kappa_c`, `kappa_s`, `eta_c`) are ignored, and vice versa. Every test case
 runs with it. Output files are named `<case>_second_...` and their metadata record
 `limiter`, `D` and `cfl91`; `scripts/convergence.jl` takes `--scheme second` and `--fixed 0.4` (Δt = 0.4Δx).
 

@@ -43,6 +43,7 @@ function case_meta(case::TestCase, res::Result, t)
     s isa SecondOrder && append!(m, ["limiter" => s.limiter, "D" => "$(s.c_D)*dx^2*dE(rho)", "cfl91" => s.cfl])
     s isa Scheme && s.kind == :dissipation &&
         append!(m, ["theta" => s.theta, "kappa" => "$(s.kappa_c)*dx*(max|u|+$(s.kappa_s))"])
+    s isa Scheme && s.kind == :shift && push!(m, "eta_c" => s.eta_c)
     return [m; Pair{String,Any}["N" => case.N, "domain" => "[$(case.domain[1]), $(case.domain[2])]", "bc" => case.bc, "lambda" => case.lambda,
         "T" => case.T, "t" => t, "steps" => res.steps, "status" => res.status,
         "timestep" => "mode=$(case.timestep.mode), cfl=$(case.timestep.cfl), dtmax=$(case.timestep.dtmax)"]]
@@ -75,7 +76,7 @@ Returns the file paths; `solve(testcase(...))` gives the [`Result`](@ref) itself
 function run_case(src::Union{Symbol,AbstractString}; dir = "data", kw...)
     case = testcase(src; kw...)
     res = solve(case)
-    base = joinpath(dir, "$(case.name)_$(scheme_name(case.scheme))_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
+    base = joinpath(dir, "$(case.name)_$(scheme_name(case.scheme))$(eta_tag(case.scheme))_N$(case.N)_lambda$(case.lambda)_T$(case.T)")
     paths = String[]
     for (t, ρ, u, φ) in res.snapshots
         meta = case_meta(case, res, t)

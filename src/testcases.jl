@@ -67,7 +67,7 @@ except those of the other order, which are ignored, so that only `kind` needs to
 """
 function scheme_from(d)
     second = get(d, "kind", "shift") == "second"
-    other = second ? ("kind", "theta", "kappa_c", "kappa_s") : ("limiter", "c_D", "cfl")
+    other = second ? ("kind", "theta", "kappa_c", "kappa_s", "eta_c") : ("limiter", "c_D", "cfl")
     kw = symbols(filter(p -> !(p.first in other), d))
     return second ? SecondOrder(; kw...) : Scheme(; kw...)
 end

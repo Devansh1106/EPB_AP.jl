@@ -12,6 +12,7 @@ snapshots = []       # extra output times in (0, T)
 
 [scheme]
 kind = "dissipation" # "shift" (§3.3), "dissipation" (§3.4) or "second" (§4)
+# eta_c = 1.25       # "shift" only: η_e = eta_c·ρ̄²/ρʰ, (43); below 5/4 (H) is not guaranteed
 theta = 0.5          # "dissipation" only: θ of Corollary 3.17
 kappa_c = 0.5        # κ = kappa_c·Δx·(max|u| + kappa_s), Remark 3.23
 kappa_s = 0.0

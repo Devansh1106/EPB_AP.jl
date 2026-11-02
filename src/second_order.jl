@@ -20,6 +20,8 @@ end
 "Name of a scheme in output file names and metadata."
 scheme_name(s::Scheme) = s.kind
 scheme_name(::SecondOrder) = :second
+# File-name tag of a shift scheme whose η factor is not the 5/4 of (43), e.g. "_eta1.5"; "" otherwise.
+eta_tag(s) = s isa Scheme && s.kind == :shift && s.eta_c != 5 / 4 ? "_eta$(s.eta_c)" : ""
 
 "Minmod of two slopes (§4.1)."
 minmod(a, b) = a * b <= 0 ? zero(a) : (abs(a) < abs(b) ? a : b)

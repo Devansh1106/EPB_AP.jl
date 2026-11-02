@@ -194,4 +194,13 @@ end
     @test EPB_AP.scheme_from(d) == SecondOrder(c_D = 0.0)
     @test EPB_AP.scheme_from(Dict("kind" => "dissipation", "theta" => 0.4, "limiter" => "none")) ==
           Scheme(kind = :dissipation, theta = 0.4)
+    # the factor of η in the shift scheme: η_e = eta_c ρ̄²/ρʰ, (43) for the default 5/4
+    @test EPB_AP.scheme_from(Dict("kind" => "shift", "eta_c" => 2.0)) == Scheme(eta_c = 2.0)
+    @test EPB_AP.scheme_from(Dict("kind" => "second", "eta_c" => 2.0)) == SecondOrder()
+    ρ = 1 .+ 0.5rand(Xoshiro(2), 20)
+    @test EPB_AP.eta_coefficient(ρ, Scheme(eta_c = 2.0)) ≈ 1.6EPB_AP.eta_coefficient(ρ, Scheme())
+    @test_throws ArgumentError Scheme(eta_c = -1.0)
+    paths = run_case(:smooth; dir, T = 0.05, scheme = Scheme(eta_c = 2.0))
+    @test occursin("smooth_shift_eta2.0_N", paths[1])
+    @test read_csv(paths[1])[1]["eta_c"] == "2.0"
 end

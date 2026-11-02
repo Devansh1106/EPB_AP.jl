@@ -1,9 +1,11 @@
 """
-    Scheme(; kind = :shift, theta = 0.5, kappa_c = 0.5, kappa_s = 0.0)
+    Scheme(; kind = :shift, theta = 0.5, kappa_c = 0.5, kappa_s = 0.0, eta_c = 5/4)
 
 First-order fully discrete scheme.
 
-* `kind = :shift`: §3.3 (Theorem 3.5), `Q = η Δt ∂E φⁿ⁺¹`, η from (43), time step (44), (CFL).
+* `kind = :shift`: §3.3 (Theorem 3.5), `Q = η Δt ∂E φⁿ⁺¹`, time step (44), (CFL), and
+  `η_e = eta_c (ρ̄ⁿ_e)²/ρⁿʰ_e`: (43) with the default 5/4, the factor for which (CFL) gives (H) (Corollary 3.6);
+  with a smaller `eta_c` the energy stability of Theorem 3.5 is no longer guaranteed.
 * `kind = :dissipation`: §3.4 in the linearised variant (52), `Q = μ ∂E φⁿ⁺¹ - κ λ² ∂E ΔM φⁿ⁺¹`,
   `μ = η Δt + κ ρ̂ⁿ`, η from Corollary 3.17(i), time step of Remark 3.22, (CFLθ).
 * `κⁿ = kappa_c Δx (max|uⁿ| + kappa_s)` (Remark 3.23; only for `:dissipation`).
@@ -13,16 +15,18 @@ Base.@kwdef struct Scheme
     theta::Float64 = 0.5
     kappa_c::Float64 = 0.5
     kappa_s::Float64 = 0.0
-    function Scheme(kind, theta, kappa_c, kappa_s)
+    eta_c::Float64 = 5 / 4
+    function Scheme(kind, theta, kappa_c, kappa_s, eta_c)
         kind in (:shift, :dissipation) ||
             throw(ArgumentError("unknown scheme kind :$kind; use :shift or :dissipation"))
-        return new(kind, theta, kappa_c, kappa_s)
+        eta_c >= 0 || throw(ArgumentError("eta_c = $eta_c must be ≥ 0"))
+        return new(kind, theta, kappa_c, kappa_s, eta_c)
     end
 end
 
-"Local edge coefficient η_e: (43) for `:shift`, Corollary 3.17(i) for `:dissipation`."
+"Local edge coefficient η_e: (43) with the factor `eta_c` for `:shift`, Corollary 3.17(i) for `:dissipation`."
 function eta_coefficient(ρ, sch::Scheme; bc = :periodic)
-    c = sch.kind == :shift ? 5 / 4 : 1 / (2 * (1 - sch.theta))
+    c = sch.kind == :shift ? sch.eta_c : 1 / (2 * (1 - sch.theta))
     return c .* edgemap(logmean, ρ; bc) .^ 2 ./ edgemap(harmonic, ρ; bc)
 end
 
