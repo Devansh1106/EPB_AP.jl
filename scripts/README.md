@@ -35,7 +35,8 @@ pip install numpy matplotlib                                 # for plot.py, plot
 
 Both `style.jl` and `style.py`:
 - References (the exact solution, the initial data, reference slopes) are black lines of width 1. The initial data
-  are dashed when an exact solution is drawn as well.
+  are dashed when an exact solution is drawn as well (`plot.py`: dotted, since its numerical solutions are dashed).
+- `plot.py` draws numerical solutions as dashed lines with markers; the other scripts, and `plot.jl`, use solid lines.
 - Every other curve has its own colour and marker and width 1.2, with markers on about 15 points, staggered between
   curves so that they do not hide each other.
 - Axes are labelled by the symbols ρ, u, ϕ, ρu, E, min ρ, Δt, ‖e^ϕ − ρ‖∞. There are no titles.
@@ -64,10 +65,13 @@ per case and time.
 | `--var rho,u,phi` | plot only these columns, in this order (default: all) |
 | `--zoom x1,x2` | add to each panel an inset magnifying [x1, x2], its y-range fitted to the curves there |
 | `--zoom x1,x2,y1,y2` | the same, with the inset's y-range fixed (the same in all panels) |
-| `--inset POS` | inset position: `topright` (default), `top`, `topleft`, `bottom`, `bottomleft`, `bottomright`, `center` |
+| `--zoom x1,x2/x3,x4` | several regions, separated by `/` (each with its own y-range if given): one inset each. `plot.py` only |
+| `--inset POS` | inset position: `topright` (default), `top`, `topleft`, `bottom`, `bottomleft`, `bottomright`, `center`; with several regions one per region, e.g. `topleft,topright` (the default for two) |
 | `--legend POS` | legend position: `best` (default), `bottomleft` (default with `--zoom`), `topleft`, `top`, `topright`, `left`, `right`, `bottom`, `bottomright`, `outertopright`, `outerright`, `outerbottom`, `none` |
 | `--no-initial` (`--no-init`) | leave out the initial data |
 | `--no-exact` | leave out the exact solution |
+| `--logy` | (`plot.py` only) logarithmic y-axis in the panels of positive variables (e.g. ρ), so that small peaks show beside a large one; other panels stay linear, with a message; insets stay linear |
+| `--ylim y1,y2` | (`plot.py` only) fix the y-range of every panel; `y1,y2/y3,y4/...` gives one range per panel, in the order of `--var`. Curves beyond it are clipped at the frame, e.g. to show small peaks beside a spike; insets keep their own range |
 | `--width W` | (`plot.py` only) figure width in inches. Default: 3.4 (one column) for one panel, 6.5 (`\textwidth`) for more. Include the figure at this width so that its fonts match the text |
 | `--no-usetex` | (`plot.py` only) use matplotlib's mathtext instead of LaTeX |
 
@@ -88,6 +92,13 @@ python3 scripts/plot.py data/riemann_shift_N200_lambda0.0001_T50.0.csv data/riem
 # the same for u and ϕ
 ...  riemann_u.png --var u --zoom 45,62,0.33,0.37 --inset bottom --legend topleft --no-initial
 ...  riemann_phi.png --var phi --zoom 45,62,-0.36,-0.32 --no-initial
+# seven-branch: both side peaks magnified, one inset each
+python3 scripts/plot.py data/sevenbranch_dissipation_N1000_lambda1.0_T1.0.csv data/sevenbranch_second_N1000_lambda1.0_T1.0.csv \
+        sevenbranch_rho.png --var rho --zoom 1.1,1.7/4.6,5.2 --legend right --no-initial
+# the same on a log axis: central spike and side peaks in one panel
+...  sevenbranch_rho_log.png --var rho --logy --no-initial
+# or a linear axis clipped at 0.4: the side peaks (0.11, 0.28) at full height, the central spike (≈ 30) cut off
+...  sevenbranch_rho_ylim.png --var rho --ylim 0,0.4 --legend top --no-initial
 # a history file: one panel per column
 julia --project=scripts scripts/plot.jl data/soliton_second_N2000_lambda1.0_T76.92307692307692_history.csv
 ```

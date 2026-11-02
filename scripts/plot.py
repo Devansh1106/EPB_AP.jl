@@ -1,18 +1,24 @@
 # Plot CSV files written by EPB_AP (solution, snapshot or history files) with matplotlib, for a LaTeX manuscript; the
 # same plots as scripts/plot.jl. Does not run the solver.
 #
-#   python3 scripts/plot.py data/<file>.csv [more.csv ...] [out.png] [--var rho,u,phi] [--zoom x1,x2[,y1,y2]]
-#           [--inset topright|top|bottom|center|...] [--legend bottomleft|...] [--no-initial] [--no-exact]
-#           [--width inches] [--no-usetex]
+#   python3 scripts/plot.py data/<file>.csv [more.csv ...] [out.png] [--var rho,u,phi] [--zoom x1,x2[,y1,y2][/...]]
+#           [--inset topright|top|bottom|center|...[,...]] [--legend bottomleft|...] [--no-initial] [--no-exact]
+#           [--logy] [--ylim y1,y2[/...]] [--width inches] [--no-usetex]
 #
 # The first column is the abscissa; every other column gets a panel (--var: only these columns, in this order), its
 # axis labelled by the variable's symbol (ρ, u, ϕ, ...). The references are black lines of width 1: the exact solution
 # (column `<name>_exact`) solid, the initial data (`<name>_init`) solid as well when the panel has no exact solution,
-# dashed otherwise. The numerical solutions each get their own colour and marker (scripts/style.py), labelled by
+# dotted otherwise. The numerical solutions are dashed, each with its own colour and marker (scripts/style.py), labelled by
 # scheme (FOPD, FODD, SODD); --no-initial (or --no-init), --no-exact omit those columns. --legend places the legend
 # (default best, bottomleft with --zoom).
 # --zoom x1,x2 adds to each panel an inset magnifying [x1, x2] (y-range fitted; x1,x2,y1,y2 sets it, the same in all
 # panels), the region marked by a grey box joined to the inset's corners; --inset places it (top right by default).
+# Several regions separated by / (e.g. --zoom 1.1,1.7/4.6,5.2) give one inset each, placed by --inset with one position
+# per region (default topleft,topright for two).
+# --logy draws the panels on a logarithmic y-axis (those of positive variables, e.g. ρ; others stay linear, with a
+# message), so that small peaks show beside a large one; insets stay linear.
+# --ylim y1,y2 fixes the y-range of every panel (y1,y2/y3,y4/...: one range per panel, in the order of --var); curves
+# beyond it are clipped at the frame, e.g. to show small peaks beside a spike. Insets keep their own range.
 # Several files are drawn in the same panels, each curve labelled by its scheme and the metadata that differs: case, N,
 # λ, t; if that is not enough, any other header entry that differs (limiter, θ, timestep, ...); else the file name.
 # There is no title. Initial data are drawn once per case, exact solutions once per case and time.
@@ -105,7 +111,7 @@ def warn_limit_exact(paths, files):
 
 
 def draw(ax, c, files, labels, init, exact, window=None):
-    """Draws the panel of column c: the numerical solutions, then on top the references (initial data, dashed if an
+    """Draws the panel of column c: the numerical solutions, then on top the references (initial data, dotted if an
     exact solution follows; exact). With window = (x1, x2), only the points in [x1, x2] (and one on each side).
     Returns the values drawn, for the axis limits."""
     drawn, ys = [], []
@@ -129,7 +135,7 @@ def draw(ax, c, files, labels, init, exact, window=None):
             j = names.index(c + suffix)
             lab = name if sum(d[0] == suffix for d in drawn) == 1 else f"{name}, {labels[i]}"
             r = sel(data[:, 0])
-            style.reference(ax, data[r, 0], data[r, j], label=lab, ls="--" if suffix == "_init" and has_exact else "-")
+            style.reference(ax, data[r, 0], data[r, j], label=lab, ls=":" if suffix == "_init" and has_exact else "-")
             if suffix == "_init" or window is not None:
                 ys.extend(data[r, j])
 
@@ -141,7 +147,7 @@ def draw(ax, c, files, labels, init, exact, window=None):
         r = sel(data[:, 0])
         ys.extend(data[r, j])
         k += 1
-        style.curve(ax, data[r, 0], data[r, j], k, label=labels[i])
+        style.curve(ax, data[r, 0], data[r, j], k, label=labels[i], ls="--")
     if init:
         others("_init", "Initial")
     if exact:
@@ -163,10 +169,10 @@ LEGENDS = {"best": ("best", None), "topleft": ("upper left", None), "top": ("upp
            "outerbottom": ("upper center", (0.5, -0.18)), "none": (None, None)}
 
 
-def plot_files(paths, out=None, vars=None, init=True, exact=True, zoom=None, inset="topright", legend=None,
-               width=None):
+def plot_files(paths, out=None, vars=None, init=True, exact=True, zooms=(), insets=("topright",), legend=None,
+               width=None, logy=False, ylims=()):
     out = out or re.sub(r"\.csv$", ".png" if len(paths) == 1 else "_compare.png", paths[0])
-    legend = legend or ("best" if zoom is None else "bottomleft")
+    legend = legend or ("bottomleft" if zooms else "best")
     files = [read_data(p) for p in paths]
     labels = file_labels(paths, files)
     if exact:
@@ -184,20 +190,33 @@ def plot_files(paths, out=None, vars=None, init=True, exact=True, zoom=None, ins
     fig, axes = plt.subplots(nr, nc, figsize=(width, 0.9 * width / nc * nr), layout="constrained", squeeze=False)
     for ax in axes.flat[len(cols):]:
         ax.set_visible(False)
-    for ax, c in zip(axes.flat, cols):
+    if len(ylims) not in (0, 1, len(cols)):
+        sys.exit(f"--ylim takes one range for all panels or one per panel ({len(cols)}: {', '.join(cols)}), "
+                 f"got {len(ylims)}")
+    for k, (ax, c) in enumerate(zip(axes.flat, cols)):
         ax.set_xlabel(style.symbol(names1[0]))
         ax.set_ylabel(style.symbol(c))
         ys = draw(ax, c, files, labels, init, exact)
         ys = ys[np.isfinite(ys)]
         if c in ("dt", "ap_residual") and len(ys) and np.all(ys > 0) and ys.max() >= 10 * ys.min():  # a decade or more
             ax.set_yscale("log")
+        elif logy:
+            if len(ys) and np.all(ys > 0):
+                ax.set_yscale("log")
+            else:
+                print(f"--logy: {c} is not positive everywhere; linear axis kept", file=sys.stderr)
         if len(ys):
             lo, hi = ys.min(), ys.max()
             w = max(1.0, abs(hi))
-            if hi - lo < 1e-9 * w:                                # constant up to round-off (e.g. mass)
+            if hi - lo < 1e-9 * w and ax.get_yscale() == "linear":                                # constant up to round-off (e.g. mass)
                 ax.set_ylim(lo - 1e-6 * w, hi + 1e-6 * w)
+        if ylims:
+            lo, hi = ylims[k if len(ylims) > 1 else 0]
+            if ax.get_yscale() == "log" and lo <= 0:
+                sys.exit(f"--ylim {lo:g},{hi:g}: the {c} axis is logarithmic, so the range must be positive")
+            ax.set_ylim(lo, hi)                                   # curves beyond it are clipped at the frame
         ax.set_xlim(min(d[:, 0].min() for _, _, d in files), max(d[:, 0].max() for _, _, d in files))
-        if zoom is not None:
+        for zoom, inset in zip(zooms, insets):
             # [x1, x2] magnified, its y-range [y1, y2] or fitted to the curves there; a grey box marks the region,
             # joined to the inset's corners.
             axins = ax.inset_axes([*INSETS[inset], W, H])
@@ -220,15 +239,15 @@ def plot_files(paths, out=None, vars=None, init=True, exact=True, zoom=None, ins
     print("wrote", out)
 
 
-FLAGS = ("--no-init", "--no-initial", "--no-exact", "--no-usetex")
+FLAGS = ("--no-init", "--no-initial", "--no-exact", "--no-usetex", "--logy")
 USAGE = ("usage: python3 scripts/plot.py data/<file>.csv [more.csv ...] [out.png] [--var rho,u,phi] "
-         "[--zoom x1,x2[,y1,y2]] [--inset topright|top|bottom|center|...] [--legend bottomleft|...] "
-         "[--no-init(ial)] [--no-exact] [--width inches] [--no-usetex]")
+         "[--zoom x1,x2[,y1,y2][/...]] [--inset topright|top|bottom|center|...[,...]] [--legend bottomleft|...] "
+         "[--no-init(ial)] [--no-exact] [--logy] [--ylim y1,y2[/...]] [--width inches] [--no-usetex]")
 
 
 def main(argv):
     argv, vals = list(argv), {}
-    for k in ("--var", "--zoom", "--inset", "--legend", "--width"):
+    for k in ("--var", "--zoom", "--inset", "--legend", "--width", "--ylim"):
         if k not in argv:
             continue
         i = argv.index(k)
@@ -237,12 +256,23 @@ def main(argv):
         vals[k] = argv[i + 1]
         del argv[i:i + 2]
     vars = [v.strip() for v in vals["--var"].split(",") if v.strip()] if "--var" in vals else None
-    zoom = tuple(float(v) for v in vals["--zoom"].split(",")) if "--zoom" in vals else None
-    if zoom is not None and not (len(zoom) in (2, 4) and zoom[0] < zoom[1] and (len(zoom) == 2 or zoom[2] < zoom[3])):
-        sys.exit(f"--zoom takes x1,x2 (x1 < x2) or x1,x2,y1,y2 (y1 < y2: one y-range for all panels)\n{USAGE}")
-    inset = vals.get("--inset", "topright")
-    if inset not in INSETS:
+    zooms = [tuple(float(v) for v in z.split(",")) for z in vals["--zoom"].split("/")] if "--zoom" in vals else []
+    for zoom in zooms:
+        if not (len(zoom) in (2, 4) and zoom[0] < zoom[1] and (len(zoom) == 2 or zoom[2] < zoom[3])):
+            sys.exit(f"--zoom takes x1,x2 (x1 < x2) or x1,x2,y1,y2 (y1 < y2: one y-range for all panels), several "
+                     f"separated by /\n{USAGE}")
+    default = {0: "topright", 2: "topleft,topright"}.get(len(zooms), ",".join(["topright"] * len(zooms)))
+    insets = vals.get("--inset", default).split(",")
+    if any(i not in INSETS for i in insets):
         sys.exit(f"--inset is one of {', '.join(sorted(INSETS))}\n{USAGE}")
+    if zooms and len(insets) != len(zooms):
+        sys.exit(f"--inset needs one position per --zoom region: {len(zooms)} regions, {len(insets)} position(s) "
+                 f"({','.join(insets)}); e.g. --inset {default}\n{USAGE}")
+    ylims = [tuple(float(v) for v in r.split(",")) for r in vals["--ylim"].split("/")] if "--ylim" in vals else []
+    for r in ylims:
+        if len(r) != 2 or not r[0] < r[1]:
+            sys.exit(f"--ylim takes y1,y2 (y1 < y2), for all panels, or one range per panel separated by / "
+                     f"(e.g. --ylim 0,0.4/-1.5,1.5)\n{USAGE}")
     legend = vals.get("--legend")
     if legend is not None and legend not in LEGENDS:
         sys.exit(f"--legend is one of {', '.join(LEGENDS)}\n{USAGE}")
@@ -257,8 +287,9 @@ def main(argv):
     if not inputs or len(outs) > 1:
         sys.exit(USAGE)
     style.apply(usetex=False if "--no-usetex" in flags else None)
-    plot_files(inputs, out=outs[0] if outs else None, vars=vars, zoom=zoom, inset=inset, legend=legend, width=width,
-               init="--no-init" not in flags and "--no-initial" not in flags, exact="--no-exact" not in flags)
+    plot_files(inputs, out=outs[0] if outs else None, vars=vars, zooms=zooms, insets=insets, legend=legend, width=width,
+               init="--no-init" not in flags and "--no-initial" not in flags, exact="--no-exact" not in flags,
+               logy="--logy" in flags, ylims=ylims)
 
 
 if __name__ == "__main__":

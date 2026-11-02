@@ -1,7 +1,7 @@
 # Plot style of the Python scripts, as scripts/style.jl, sized for a LaTeX manuscript: Computer Modern text (rendered
 # by LaTeX, or by matplotlib's mathtext with --no-usetex), 9 pt labels, 8 pt ticks and legend, full frame with ticks
 # inside, no grid, no titles. A reference (exact solution, initial data) is a black line of width 1; every other curve
-# has its own colour (the palette of the Julia plots) and marker and width 1.2.
+# has its own colour (Okabe–Ito, colour-blind safe, the first three far apart) and marker and width 1.2.
 import shutil
 
 import matplotlib
@@ -10,8 +10,8 @@ matplotlib.use("Agg")
 import matplotlib.pyplot as plt  # noqa: E402
 import numpy as np  # noqa: E402
 
-COLORS = ("#009AFA", "#E36F47", "#3EA44E", "#C371D2", "#AC8E18", "#00AAAE", "#ED5E93", "#C68225", "#00A98D",
-          "#8E971D")
+COLORS = ("#0072B2", "#D55E00", "#009E73", "#CC79A7", "#E69F00", "#56B4E9", "#882255", "#999933", "#332288",
+          "#F0E442")
 MARKERS = ("o", "s", "^", "D", "v", "*", "p", "h", "X", "P")
 REF_LW = 1.0
 LW = 1.2
