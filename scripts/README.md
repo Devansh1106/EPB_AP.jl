@@ -9,15 +9,16 @@ Scripts for plotting runs and for convergence and energy studies. Run them from 
 | [`convergence.jl`](#convergencejl) | Julia | yes | errors and orders on refined grids |
 | [`plot_convergence.py`](#plot_convergencepy) | Python (matplotlib) | no | the convergence plot from the errors written by `convergence.jl --csv` |
 | [`energy.jl`](#energyjl) | Julia | yes (or reads history files) | the discrete energy (14) along runs |
+| [`plot_energy.py`](#plot_energypy) | Python (matplotlib) | no | the energy plot from the curves written by `energy.jl --csv` |
 | `style.jl`, `style.py` | | | plot style shared by the Julia / Python scripts |
 
 ## Setup
 
 ```sh
 julia --project=scripts -e 'using Pkg; Pkg.instantiate()'   # once: EPB_AP (from ..) and Plots
-pip install numpy matplotlib                                 # for plot.py
+pip install numpy matplotlib                                 # for plot.py, plot_convergence.py, plot_energy.py
 ```
-`plot.py` renders text with LaTeX when `latex` is installed (it needs the `type1cm` package, e.g.
+`plot.py`, `plot_convergence.py` and `plot_energy.py` render text with LaTeX when `latex` is installed (it needs the `type1cm` package, e.g.
 `sudo dnf install texlive-type1cm`); otherwise, or with `--no-usetex`, matplotlib's own Computer Modern.
 
 ## Input files
@@ -182,34 +183,69 @@ julia --project=scripts scripts/energy.jl <case | file.toml> [options]
 | `--lambda 1,1e-2,1e-4,1e-6` | values of λ (this is the default) |
 | `--N N` | grid (default: the file's) |
 | `--T T` | final time (default: the file's) |
+| `--eta_c c` | factor of η in the shift scheme, η_e = c·ρ̄²/ρʰ (default 5/4, (43)); `--plot yes` then writes `energy_<case>_eta<c>_N<N>.png` |
 | `--plot yes\|out.png` | E(t) − E(0) against t, one panel per scheme, one curve per λ. `yes` writes `energy_<case>_N<N>.png` |
-| `--relative` | E(t)/E(0) instead of E(t) − E(0), in the table and the plot |
+| `--csv yes\|out.csv` | write the curves of the plot for [`plot_energy.py`](#plot_energypy), in both modes; `yes` names the file as the plot, with `.csv` |
+| `--relative` | the relative change (E(0) − E(t)) / E(0) instead of E(t) − E(0), in the table and the plot |
 
 **File mode** reads `_history.csv` files written by `run_case` and runs nothing:
 ```sh
-julia --project=scripts scripts/energy.jl <run>_history.csv [more_history.csv ...] [--plot out.png] [--relative]
+julia --project=scripts scripts/energy.jl <run>_history.csv [more_history.csv ...] [--plot out.png] [--csv yes|out.csv] [--relative]
 ```
 It draws one plot of all the runs (legend FOPD, FODD, SODD). If the case has an exact solution, its energy on the
 first file's grid is the black reference "Exact"; it is left out, with a warning, when its E(0) differs from the
-run's by more than 1%. Default output: `energy_[relative_]<case>_N<N>_compare.png`.
+run's by more than 1%. Default output: `energy_[relative_]<case>_N<N>_compare.png`. With `--csv` the Julia plot is drawn
+only if `--plot` is given too (and Plots is then not loaded, which saves about 35 s).
 
 For each run the table gives:
-- E(T) − E(0), or E(T)/E(0) with `--relative`;
+- E(T) − E(0), or (E(0) − E(T)) / E(0) with `--relative`;
 - the largest step change max(Eⁿ⁺¹ − Eⁿ);
 - the number of steps where the energy increases beyond round-off (1e3·eps·max(1, |E⁰|)).
 
 Energy stability means no increasing step: Theorems 3.5 and 3.16 for first order. For second order no fully discrete
 inequality is claimed (§4.13), so the table is an observation.
 
-`--relative` divides by E(0), which is negative for e.g. the soliton (E(0) ≈ −47.5). A decreasing energy then gives a
-ratio above 1.
+`--relative` gives (E(0) − E(t)) / E(0). It is meaningful because E(0) is far from 0 in the test cases (e.g.
+≈ −47.5 for the soliton); E(0) = 0 is an error. For a decreasing energy it has the sign of E(0): positive when
+E(0) > 0, negative when E(0) < 0 (the soliton). Whether the energy decreased is also read from max ΔE and #ΔE>0 in
+the table, or from the plot without `--relative`.
 
 Examples:
 ```sh
 julia --project=scripts scripts/energy.jl smooth --plot yes
 julia --project=scripts scripts/energy.jl ap --schemes dissipation,second --lambda 1,1e-4 --N 400
-# soliton over two periods, FODD and SODD
-julia --project=. -e 'using EPB_AP; T = 100/1.3; run_case(:soliton; N = 2000, T); run_case(:soliton; N = 2000, T, scheme = SecondOrder())'
-julia --project=scripts scripts/energy.jl data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
+# soliton over two periods, FOPD, FODD and SODD
+julia --project=. -e 'using EPB_AP; T = 100/1.3
+    for s in (Scheme(), Scheme(kind = :dissipation), SecondOrder()); run_case(:soliton; N = 2000, T, scheme = s); end'
+julia --project=scripts scripts/energy.jl data/soliton_shift_N2000_lambda1.0_T76.92307692307692_history.csv \
+      data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
       data/soliton_second_N2000_lambda1.0_T76.92307692307692_history.csv --relative --plot soliton_energy.png
+```
+
+## plot_energy.py
+
+The energy plot of `energy.jl` with matplotlib, in the style of `plot.py`, from the curves written by `energy.jl --csv`.
+It does not run the solver.
+
+```sh
+python3 scripts/plot_energy.py <energy>.csv [out.png] [--legend POS] [--width W] [--no-usetex]
+```
+
+The curve file has header lines `# key = value` (case, N, T, measure, the label `curve<k>` of each curve, `curve0`
+being the exact solution, and in a case study the `panel<k>` of its scheme), then the rows `curve, lambda, t, value`.
+A case study gives one panel per scheme (named in its legend title) with one curve per λ; history files give one
+panel with one curve per run and the exact energy as the black reference. The y-axis is E(t) − E(0), or
+(E(0) − E(t)) / E(0) for `--relative`. Options as in `plot_convergence.py` (`--legend` without `below`); default
+output: the file with `.png`.
+
+Examples:
+```sh
+# soliton, FOPD, FODD and SODD, relative change
+julia --project=scripts scripts/energy.jl data/soliton_shift_N2000_lambda1.0_T76.92307692307692_history.csv \
+      data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
+      data/soliton_second_N2000_lambda1.0_T76.92307692307692_history.csv --relative --csv soliton_energy.csv
+python3 scripts/plot_energy.py soliton_energy.csv
+# a case study: one panel per scheme
+julia --project=scripts scripts/energy.jl smooth --schemes shift,second-minmod --lambda 1,1e-4 --csv yes
+python3 scripts/plot_energy.py energy_smooth_N50.csv
 ```

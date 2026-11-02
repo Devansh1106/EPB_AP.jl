@@ -91,11 +91,14 @@ julia --project=scripts scripts/energy.jl ap --schemes dissipation,second --lamb
 ```
 For each scheme and λ: E(T) − E(0), the largest step change max(Eⁿ⁺¹ − Eⁿ) of the energy (14) and the number of steps
 where it increases. `--plot yes` writes `energy_<case>_N<N>.png`: E(t) − E(0) against t, one panel per scheme.
-`--relative` uses E(t)/E(0) instead (the energy (14) unshifted, so with E(0) < 0 a decreasing energy gives a ratio
-above 1). Given history files of runs instead of a case, nothing is run: one plot of those runs and, if the case has
-one, the exact solution's energy (black), e.g. the soliton over two periods:
+`--relative` uses the relative change (E(0) − E(t))/E(0) instead. For a decreasing energy it has the sign of E(0):
+negative in the test cases, whose E(0) < 0 (≈ −47.5 for the soliton, ≈ −19.6 for smooth); E(0) = 0 is an error.
+Given history files of runs instead of a case, nothing is run: one plot of those runs and, if the case has one, the
+exact solution's energy (black), e.g. the soliton over two periods with FOPD, FODD and SODD:
 ```sh
-julia --project=. -e 'using EPB_AP; T = 100/1.3; run_case(:soliton; N = 2000, T); run_case(:soliton; N = 2000, T, scheme = SecondOrder())'
-julia --project=scripts scripts/energy.jl data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
+julia --project=. -e 'using EPB_AP; T = 100/1.3
+    for s in (Scheme(), Scheme(kind = :dissipation), SecondOrder()); run_case(:soliton; N = 2000, T, scheme = s); end'
+julia --project=scripts scripts/energy.jl data/soliton_shift_N2000_lambda1.0_T76.92307692307692_history.csv \
+      data/soliton_dissipation_N2000_lambda1.0_T76.92307692307692_history.csv \
       data/soliton_second_N2000_lambda1.0_T76.92307692307692_history.csv --relative --plot soliton_energy.png
 ```
