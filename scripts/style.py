@@ -19,7 +19,7 @@ LW = 1.2
 # Axis symbol of a solution variable (CSV column), in LaTeX.
 SYMBOLS = {"x": r"$x$", "t": r"$t$", "rho": r"$\rho$", "u": r"$u$", "phi": r"$\phi$", "m": r"$\rho u$",
            "energy": r"$E$", "min_rho": r"$\min \rho$", "mass": "mass", "ap_residual": r"$\Vert e^\phi - \rho\Vert_\infty$",
-           "dt": r"$\Delta t$", "cfl_ratio": "CFL ratio"}
+           "ap": r"$e^\phi - \rho$", "dt": r"$\Delta t$", "cfl_ratio": "CFL ratio"}
 
 # Legend name of a scheme (`scheme` header entry): shift (§3.3), dissipation (§3.4), second order (§4).
 SCHEME_LABELS = {"shift": "FOPD", "dissipation": "FODD", "second": "SODD"}

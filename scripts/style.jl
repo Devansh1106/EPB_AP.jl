@@ -7,7 +7,8 @@ const LW = 1.2
 
 "Axis symbol of a solution variable (CSV column or convergence variable)."
 const SYMBOLS = Dict("rho" => "ρ", "u" => "u", "phi" => "ϕ", "m" => "ρu", "energy" => "E", "min_rho" => "min ρ",
-                     "mass" => "mass", "ap_residual" => "‖e^ϕ − ρ‖∞", "dt" => "Δt", "cfl_ratio" => "CFL ratio")
+                     "mass" => "mass", "ap_residual" => "‖e^ϕ − ρ‖∞", "ap" => "e^ϕ − ρ", "dt" => "Δt",
+                     "cfl_ratio" => "CFL ratio")
 symbol(name) = get(SYMBOLS, name, name)
 
 # Legend name of a scheme (`scheme` header entry): shift (§3.3), dissipation (§3.4), second order (§4).

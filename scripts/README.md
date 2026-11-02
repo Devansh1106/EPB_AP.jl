@@ -7,6 +7,7 @@ Scripts for plotting runs and for convergence and energy studies. Run them from 
 | [`plot.jl`](#plotjl--plotpy) | Julia (Plots.jl, GR) | no | plot CSV files written by `run_case` |
 | [`plot.py`](#plotjl--plotpy) | Python (matplotlib) | no | the same plots, styled for a LaTeX manuscript |
 | [`convergence.jl`](#convergencejl) | Julia | yes | errors and orders on refined grids |
+| [`plot_convergence.py`](#plot_convergencepy) | Python (matplotlib) | no | the convergence plot from the errors written by `convergence.jl --csv` |
 | [`energy.jl`](#energyjl) | Julia | yes (or reads history files) | the discrete energy (14) along runs |
 | `style.jl`, `style.py` | | | plot style shared by the Julia / Python scripts |
 
@@ -103,15 +104,18 @@ julia --project=scripts scripts/convergence.jl <case | file.toml> [options]
 | `--scheme shift\|dissipation\|second` | scheme kind (default: the case file's; the file's settings are kept when the kind is the same) |
 | `--limiter minmod\|none` | limiter of the second-order scheme |
 | `--c_D c` | dissipation coefficient of the second-order scheme |
-| `--lambda λ` | λ (default: the file's) |
+| `--eta_c c` | factor of η in the shift scheme, η_e = c·ρ̄²/ρʰ (default 5/4, (43); below 5/4 energy stability is not guaranteed). Output names get `_eta<c>` |
+| `--lambda λ[,λ2,...]` | λ (default: the file's). With several, the study is repeated for each and the plot has one curve per λ in each panel; `--plot yes` names it with all of them, e.g. `lambda1.0_0.001_1.0e-6` |
 | `--T T` | final time (default: the file's) |
 | `--N 100,200,400,800` | grids (this is the default) |
 | `--dtmax c` | cap the scheme's Δt rule at c·Δx |
 | `--fixed c` | fixed Δt = c·Δx (the §5.4 order studies use 0.4) |
-| `--var rho,u,phi,m` | variables, m = ρu (default: all four) |
+| `--var rho,u,phi,m,ap` | variables, m = ρu (default: rho,u,phi,m). `ap` is the quasineutral residual e^ϕ − ρ, measured against 0: its norms should be O(λ²) on every grid (the AP property), so its order is about 0 |
 | `--ref Nref` | grid of the reference solution when the case has no exact solution. Default 4·max N; it must be a multiple of every N |
 | `--plot yes\|out.png` | log–log plot of the L1, L2, L∞ errors against N, one panel per variable. `yes` writes `convergence_<case>_<scheme>[_<limiter>]_lambda<λ>.png` |
 | `--slope 1,2` | reference slopes in the plot (default: the scheme's order). The first is solid, the next dashed, dotted. Needs `--plot` |
+| `--norm L1,L2,Linf` | norms drawn in the plot (default: all three; the tables always show all). With fewer, `--plot yes` appends them to the name, e.g. `_L1`. Needs `--plot` |
+| `--csv yes\|out.csv` | write the errors (all λ, N, variables and norms) for [`plot_convergence.py`](#plot_convergencepy). `yes` writes `convergence_<case>_<scheme>[_<limiter>]_lambda<λ>.csv` |
 
 Errors are measured against the exact solution when the case has one. Otherwise the reference is the same scheme on
 Nref cells, restricted to each grid by cell averaging. The norms are normalized: (Δx/|Ω|)Σ|e|, ((Δx/|Ω|)Σe²)^½ and
@@ -124,6 +128,43 @@ julia --project=scripts scripts/convergence.jl simplewave --scheme shift --N 100
 julia --project=scripts scripts/convergence.jl soliton --T 2 --dtmax 0.4 --var rho,m
 julia --project=scripts scripts/convergence.jl smooth --scheme second --limiter none --c_D 0 --ref 3200
 julia --project=scripts scripts/convergence.jl smooth --scheme second --plot yes --slope 1,2
+```
+
+## plot_convergence.py
+
+The plot of `convergence.jl --plot`, with matplotlib and the manuscript style of `plot.py`, from the error files that
+`convergence.jl --csv` writes. It runs nothing, so the plot can be redone without solving again.
+
+```sh
+python3 scripts/plot_convergence.py <errors>.csv [more.csv ...] [out.png] [options]
+```
+
+The error file has header lines `# key = value` (case, scheme, limiter, c_D or eta_c, T, timestep, reference), then one row per
+(λ, N) with the columns `lambda, N` and `<var>_L1, <var>_L2, <var>_Linf` for each variable.
+
+Each variable gets a log–log panel of the error against N. Each (file, λ, norm) gets a curve, labelled by what differs
+between the curves: the scheme (FOPD, FODD, SODD, with the limiter when two files differ in it), λ, the norm. Several
+files, e.g. FOPD and SODD runs of one case, are drawn in the same panels.
+
+| Option | Meaning |
+|---|---|
+| `out.png` | output file. Default: the first file with `.png` (`_compare.png` for several), with `_<norms>` before it when `--norm` leaves out a norm. Also `.pdf`, `.svg`, `.pgf`, `.eps` |
+| `--var rho,u,phi` | panels (default: all variables of the first file) |
+| `--norm L1,L2,Linf` | norms drawn (default: all three) |
+| `--lambda λ[,λ2,...]` | only these λ (default: all of each file) |
+| `--slope 1,2` | black reference slopes, the first solid, the next dashed, dotted (default: the orders of the files' schemes). The `ap` panel has none; it has a dotted line at λ² instead |
+| `--legend POS` | a legend in each panel at a position of `plot.py` (default `best`), or `below`: one legend under all the panels, for many curves |
+| `--width W` | figure width in inches (default 3.4 for one panel, 6.5 for more) |
+| `--no-usetex` | use matplotlib's mathtext instead of LaTeX |
+
+Examples:
+```sh
+# all λ in one plot, L1 only
+julia --project=scripts scripts/convergence.jl smooth --lambda 1,1e-3,1e-6 --fixed 0.4 --var rho,u,phi --csv yes
+python3 scripts/plot_convergence.py convergence_smooth_shift_lambda1.0_0.001_1.0e-6.csv --norm L1
+# FOPD and SODD in the same panels, one legend below
+python3 scripts/plot_convergence.py convergence_smooth_shift_lambda1.0_0.001_1.0e-6.csv \
+        convergence_smooth_second_minmod_lambda1.0_0.001_1.0e-6.csv smooth_compare.png --norm L1 --legend below
 ```
 
 ## energy.jl
